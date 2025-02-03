@@ -1,0 +1,244 @@
+:root {
+  /* Color Variables */
+  --color-base: #F0EEE6;
+  --color-white: #FFFFFF;
+  --color-text-primary: #44403C;
+  --color-text-secondary: #57534E;
+  --color-accent: #CC785C;
+  --color-accent-hover: #B56B52;
+  --color-accent-light: #E8B4A4;
+  --color-accent-bg: #FDF1ED;
+  --color-icon: #CC785C;
+  
+  /* Typography */
+  --font-serif: "Times New Roman", serif;
+  --font-sans: system-ui, sans-serif;
+  
+  /* Spacing */
+  --section-padding: 8rem;
+  --container-max-width: 48rem;
+  
+  /* Border Radius */
+  --radius-full: 9999px;
+  --radius-lg: 0.5rem;
+  
+  /* Transitions */
+  --transition-default: all 0.2s ease-in-out;
+}
+
+/* Header Styles */
+.main-header {
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--color-base);
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: var(--transition-default);
+}
+
+.nav-link:hover {
+  color: var(--color-accent);
+}
+
+/* Base Styles */
+body {
+  background-color: var(--color-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+.container {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-family: var(--font-serif);
+}
+
+.hero-title {
+  font-size: 3.75rem;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+}
+
+.hero-text {
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.75;
+}
+
+/* Buttons */
+.button {
+  padding: 0.75rem 2rem;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition-default);
+  cursor: pointer;
+}
+
+.button-primary {
+  background-color: var(--color-accent);
+  color: var(--color-white);
+  border: none;
+}
+
+.button-primary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.button-secondary {
+  background-color: var(--color-white);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-accent-light);
+}
+
+.button-secondary:hover {
+  background-color: var(--color-accent-bg);
+}
+
+/* Sections */
+.section {
+  padding: var(--section-padding) 0;
+}
+
+.section-alternate {
+  background-color: var(--color-white);
+}
+
+.section-accent {
+  background-color: var(--color-accent-bg);
+}
+
+/* Features */
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+.feature {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.feature-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-icon);
+  flex-shrink: 0;
+}
+
+.feature-title {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.feature-text {
+  color: var(--color-text-secondary);
+  line-height: 1.75;
+}
+
+/* Cards */
+.partner-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+
+.partner-card {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-accent-light);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--color-accent-light);
+  padding: 4rem 0;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+.footer-title {
+  font-family: var(--font-serif);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.footer-text {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+.mb-16 {
+  margin-bottom: 4rem;
+}
+
+/* Media Queries */
+@media (min-width: 768px) {
+  .hero-title {
+    font-size: 4.5rem;
+  }
+  
+  .button-container {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .partner-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .footer-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3rem;
+  }
+}
