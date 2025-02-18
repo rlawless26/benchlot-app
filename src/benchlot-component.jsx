@@ -1,68 +1,151 @@
-import React from 'react';
-import { Camera, Shield, Users } from 'lucide-react';
-import './benchlot-styles.css';
+import React, { useState } from 'react';
+import { Camera, Shield, Users, ChartSpline, LayoutList, BadgeCheck, CircleArrowRight, Wrench, Wallet } from 'lucide-react';
+import { supabase } from './supabaseClient';
+import '/Users/robertlawless/Documents/benchlot-app/src/benchlot-styles.css';
+import { Routes, Route } from 'react-router-dom';
+import LandingPage from './benchlot-component.jsx';
+import SurveyPage from './SurveyComponent.jsx'
+
+const App = () => {
+  return (
+     <>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/survey" element={<SurveyPage />} />
+      </Routes>
+     </>
+  );
+};
 
 export default function LandingPage() {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus({ type: '', message: '' });
+
+    try {
+      const { data, error } = await supabase
+        .from('waitlist')
+        .insert([
+          {
+            email,
+            signed_up_at: new Date().toISOString(),
+          }
+        ]);
+
+      if (error) throw error;
+
+      setSubmitStatus({
+        type: 'success',
+        message: 'Thanks for joining! We\'ll keep you updated.'
+      });
+      setEmail('');
+      
+    } catch (error) {
+      console.error('Error:', error);
+      setSubmitStatus({
+        type: 'error',
+        message: error.message === 'duplicate key value violates unique constraint' 
+          ? 'This email is already on our waitlist!'
+          : 'Something went wrong. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div style={{ backgroundColor: 'var(--color-base)' }}>
-      {/* Main Header */}
+      {/* Header */}
       <header className="main-header">
-        <div className="container header-content">
-          <a href="/" className="logo">BENCHLOT</a>
-          <nav className="nav-links">
-            <a href="/browse" className="nav-link">Browse</a>
-            <a href="/sell" className="nav-link">Sell</a>
-            <a href="/about" className="nav-link">About</a>
-          </nav>
+        <div className="header-content">
+          <a href='MainLayout' className="logo">BENCHLOT</a>
         </div>
       </header>
-
-      {/* Hero Section */}
-      <header className="section">
+      
+      {/* Hero Section with Form */}
+      <section className="section">
         <div className="container">
-          <h1 className="hero-title">
-            A marketplace for exceptional tools
+          <h1 className="hero-title text-center">
+          The marketplace for woodworkers
           </h1>
-          <p className="hero-text">
-            BENCHLOT connects Boston's finest craftsmen with quality tools, 
-            bringing trust and verification to the secondary tool market.
+          <p className="hero-text text-center">
+          Buy and sell new, used, and vintage tools
           </p>
-          <div className="button-container">
-            <button className="button button-primary">
-              List Your Tools
-            </button>
-            <button className="button button-secondary">
-              Browse Collection
-            </button>
-          </div>
-        </div>
-      </header>
 
+          <div className="email-form">
+            <div className="form-header">
+              <h3 className="feature-title">Join the waitlist</h3>
+            </div>
+            
+            <form onSubmit={handleSubmit}>
+              
+              <div className="input-group">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="email-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+                <button 
+                  type="submit" 
+                  className="submit-button"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Joining...' : 'Join Now'}
+                </button>
+              </div>
+
+              {submitStatus.message && (
+                <div className={`submit-status ${submitStatus.type}`}>
+                  {submitStatus.message}
+                </div>
+              )}
+            </form>
+         <p className="form-text">We're building the new standard for buying and selling tools</p>
+            </div>
+            </div>
+            </section>
       {/* Features */}
       <section className="section section-alternate">
         <div className="container">
           <h2 className="hero-title text-center mb-16">
-            A new standard for buying and selling tools
+            Purpose built for buying and selling tools
           </h2>
           <div className="features">
             <div className="feature">
-              <Shield className="feature-icon" />
+            <BadgeCheck className="feature-icon" />
               <div>
-                <h3 className="feature-title">Expert Verification</h3>
+                <h3 className="feature-title">Authentication</h3>
                 <p className="feature-text">
-                  Every tool is personally inspected and authenticated by our team of experts.
                   We verify condition, authenticity, and market value to ensure transparency.
                 </p>
               </div>
             </div>
             
             <div className="feature">
-              <Camera className="feature-icon" />
+              <ChartSpline className="feature-icon" />
               <div>
-                <h3 className="feature-title">Professional Documentation</h3>
+                <h3 className="feature-title">Price Transparency</h3>
                 <p className="feature-text">
-                  We provide professional photography and detailed condition reports
-                  for every tool, giving buyers complete confidence in their purchase.
+                  Price reporting and trends from real transactions, giving you confidence in every transaction.
+                </p>
+              </div>
+            </div>
+
+            <div className="feature">
+              <LayoutList className="feature-icon" />
+              <div>
+                <h3 className="feature-title">Free to list</h3>
+                <p className="feature-text">
+                Tell us what you’re selling and we’ll help you list it, price it, and get it in front of a community of makers.
                 </p>
               </div>
             </div>
@@ -70,10 +153,9 @@ export default function LandingPage() {
             <div className="feature">
               <Users className="feature-icon" />
               <div>
-                <h3 className="feature-title">Verified Community</h3>
+                <h3 className="feature-title">Knowledgeable Community</h3>
                 <p className="feature-text">
-                  Our marketplace is built on trust. Every member is verified through
-                  our partnership network of Boston's premier makerspaces.
+                  Bringing together a dedicated community of craftspeople who understand the value of a quality tool.
                 </p>
               </div>
             </div>
@@ -81,7 +163,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust Section */}
+      {/* Trust Section 
       <section className="section section-accent">
         <div className="container">
           <h2 className="hero-title text-center">Trusted by Boston's Maker Community</h2>
@@ -97,43 +179,73 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>*/}
 
       {/* CTA Section */}
-      <section className="section section-alternate">
+      <section className="section section-signup">
         <div className="container text-center">
-          <h2 className="hero-title">Join Our Community</h2>
-          <p className="feature-text mb-8">
-            Experience a new standard in buying and selling quality tools.
-          </p>
-          <button className="button button-primary">
-            Get Started
-          </button>
+        <section className="section">
+        <div className="container">
+          <div className="email-form">
+            <div className="form-header">
+              <h3 className="feature-title">Join the waitlist</h3>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="input-group">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="email-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+                <div>
+                <button 
+                  type="submit" 
+                  className="submit-button"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Joining...' : 'Join Now'}
+                </button>
+                </div>
+              </div>
+
+              {submitStatus.message && (
+                <div className={`submit-status ${submitStatus.type}`}>
+                  {submitStatus.message}
+                </div>
+              )}
+            </form>
+            <p className="form-text">Benchlot is the online marketplace dedicated to buying and selling new, used, and vintage tools.</p>
+            </div>
+            </div>
+            </section>
         </div>
       </section>
-
       {/* Footer */}
       <footer className="footer">
         <div className="container">
           <div className="footer-grid">
             <div>
-              <h3 className="footer-title">BENCHLOT</h3>
+              <h3 className="footer-title">Benchlot</h3>
               <p className="footer-text">
-                The trusted marketplace for premium tools
+                The trusted marketplace for tools
               </p>
             </div>
             <div>
               <h3 className="footer-title">Contact</h3>
               <p className="footer-text">hello@benchlot.com</p>
-              <p className="footer-text">617-555-0123</p>
+              <p className="footer-text">781-960-3998</p>
             </div>
             <div>
               <h3 className="footer-title">Location</h3>
               <p className="footer-text">Greater Boston Area</p>
             </div>
           </div>
-        </div>
+          </div>
       </footer>
     </div>
-  );
+  ); 
 }
