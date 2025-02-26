@@ -127,6 +127,7 @@ h1, h2, h3 {
   padding: 0 1rem;
   max-width: 55ch;
   margin: 0 auto 2rem;
+  font-weight:bold;
 }
 
 /* Email Form */

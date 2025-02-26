@@ -50,11 +50,11 @@ const LandingPage = () => {
       {/* Header */}
       <header className="main-header">
         <div className="header-content">
-        <a href='MainLayout' className="logo-container"> 
+        <a href='benchlot.com' className="logo-container"> 
       <img 
         src={logo} 
         alt="Benchlot"
-        className="logo-image"  
+        className="logo-image" 
       />
     </a>
         </div>
