@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Camera, Shield, Users, ChartSpline, LayoutList, BadgeCheck, CircleArrowRight, Wrench, Wallet } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './benchlot-styles.css';
-import logo from 'src/assets/Benchlot.svg';
+import logo from './assets/Benchlot.svg';
 
 const LandingPage = () => {
   const [email, setEmail] = useState('');
