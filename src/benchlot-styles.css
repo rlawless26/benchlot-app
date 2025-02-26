@@ -242,7 +242,7 @@ h1, h2, h3 {
 }
 
 .section-signup {
-  background-image: url(.assets/shopbackground.jpg);;
+  background-image: url(./assets/shopbackground.jpg);
   background-repeat: no-repeat;
   background-size: cover;
 }
