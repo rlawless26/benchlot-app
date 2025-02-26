@@ -9,6 +9,7 @@
     "@radix-ui/react-slider": "^1.2.3",
     "@supabase/supabase-js": "^2.48.1",
     "@tailwindcss/cli": "^4.0.6",
+    "@vercel/speed-insights": "^1.2.0",
     "clsx": "^2.1.1",
     "cra-template": "1.2.0",
     "lucide-react": "^x.x.x",
