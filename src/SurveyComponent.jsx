@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import '/Users/robertlawless/Documents/benchlot-app/src/benchlot-styles.css';
@@ -23,7 +23,19 @@ function SurveyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-
+  const [completedSections, setCompletedSections] = useState(new Set());
+  const isCurrentSectionComplete = () => {
+    const currentQuestions = sections[currentSection].questions;
+    return currentQuestions.every(q => {
+      if (q.type === 'checkbox') {
+        return formData[q.id]?.length > 0;
+      }
+      if (q.type === 'textarea') {
+        return true; // Optional
+      }
+      return formData[q.id];
+    });
+  };
   const sections = [
     {
       title: "About You",
@@ -233,38 +245,69 @@ function SurveyPage() {
     setError('');
 
     try {
-      // Get email from URL parameter
       const urlParams = new URLSearchParams(window.location.search);
-      const email = urlParams.get('email');
+      let email = urlParams.get('email');
+      // Fix email encoding
+      email = email.replace(' ', '+');
+      console.log('Attempting update for email:', email);
 
-      if (!email) {
-        throw new Error('No email provided');
+      // Stringify the form data
+      const formDataString = JSON.stringify(formData);
+      console.log('Sending data:', formDataString);
+
+      // First verify the email exists
+      const { data: checkData, error: checkError } = await supabase
+        .from('waitlist')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+      if (checkError || !checkData) {
+        console.error('Email check failed:', checkError);
+        throw new Error('Email not found');
       }
 
-      const { error } = await supabase
+      console.log('Email found:', checkData);
+
+      // Now try the update
+      const { data, error } = await supabase
         .from('waitlist')
         .update({
-          survey_responses: formData,
+          survey_responses: formDataString,
           survey_completed_at: new Date().toISOString()
         })
-        .eq('email', email);
+        .eq('email', email)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
 
+      console.log('Update successful:', data);
       setSuccess(true);
       window.scrollTo(0, 0);
     } catch (err) {
+      console.error('Full error:', err);
       setError('Something went wrong. Please try again.');
-      console.error('Error:', err);
     } finally {
       setSubmitting(false);
     }
-  };
+};
+  useEffect(() => {
+    console.log('Current section:', currentSection);
+    console.log('Current form data:', formData);
+  }, [currentSection, formData]);
 
   const nextSection = () => {
-    if (currentSection < sections.length - 1) {
-      setCurrentSection(prev => prev + 1);
-      window.scrollTo(0, 0);
+    if (isCurrentSectionComplete()) {
+      setCompletedSections(prev => new Set([...prev, currentSection]));
+      if (currentSection < sections.length - 1) {
+        setCurrentSection(prev => prev + 1);
+        window.scrollTo(0, 0);
+      }
+    } else {
+      setError('Please complete all required fields before continuing');
     }
   };
 
@@ -393,7 +436,7 @@ function SurveyPage() {
               </div>
             ))}
 
-            <div className="survey-navigation">
+<div className="survey-navigation">
               {currentSection > 0 && (
                 <button
                   type="button"
@@ -405,22 +448,22 @@ function SurveyPage() {
                 </button>
               )}
 
-              {currentSection < sections.length - 1 ? (
+              {currentSection === sections.length - 1 ? (
+                <button
+                  type="submit"
+                  className="submit-button"
+                  disabled={submitting || !isCurrentSectionComplete()}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Survey'}
+                </button>
+              ) : (
                 <button
                   type="button"
                   onClick={nextSection}
                   className="submit-button"
-                  disabled={submitting}
+                  disabled={submitting || !isCurrentSectionComplete()}
                 >
                   Next
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="submit-button"
-                  disabled={submitting}
-                >
-                  {submitting ? 'Submitting...' : 'Submit Survey'}
                 </button>
               )}
             </div>

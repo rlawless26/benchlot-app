@@ -1,10 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=Montserrat:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Color Variables */
   --color-base: #F0EEE6;
   --color-white: #FFFFFF;
   --color-text-primary: #44403C;
   --color-text-secondary: #57534E;
-  --color-accent: #75451a;
+  --color-accent: #17613F;
   --color-accent-hover: #B56B52;
   --color-accent-light: #E8B4A4;
   --color-accent-dark: #d4d4d4;
@@ -16,6 +22,9 @@
   /* Typography */
   --font-serif: "Spectral", serif;
   --font-sans: "Montserrat", sans-serif;
+
+
+
   
   /* Spacing */ 
   --section-padding: 6rem;
@@ -50,12 +59,25 @@
 }
 
 .logo {
-  font-family: var(--font-sans);
+  font-family: "spectral", sans-serif;
+  font-weight: 600;
+  font-style: normal; 
   font-size: 1.5rem;
   color: var(--color-accent);
   font-weight: 700;
   text-decoration: none;
   letter-spacing: .2em;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo-image {
+  width: auto;
+  height: 24px;
 }
 
 .nav-links {
@@ -91,6 +113,7 @@ body {
 h1, h2, h3 {
   font-family: var(--font-serif);
 }
+
 
 .hero-title {
   font-size: clamp(2.5rem, 5vw, 4.5rem);
@@ -242,6 +265,7 @@ h1, h2, h3 {
 .feature-icon {
   width: 2rem;
   height: 2rem;
+  margin: auto;
 }
 
 .feature-icon-signup {
@@ -253,12 +277,13 @@ h1, h2, h3 {
 .feature-title {
   font-size: clamp(1.5rem, 4vw, 2rem);
   margin-bottom: .75rem;
-  margin-top: 0;
+  margin-top: .25rem;
 }
 
 .feature-text {
   color: var(--color-text-secondary);
   line-height: 1.75;
+  margin-bottom:1rem;
 }
 
 
@@ -271,6 +296,7 @@ h1, h2, h3 {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding-top:10px;
 }
 
 /* Cards */
@@ -645,7 +671,7 @@ h1, h2, h3 {
 .radio-option {
   display: flex;
   align-items: center;
-  padding: 0.75rem 0;
+  padding: 0.25rem 0;
 }
 
 /* Navigation Buttons */

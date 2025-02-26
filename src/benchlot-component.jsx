@@ -1,23 +1,10 @@
 import React, { useState } from 'react';
 import { Camera, Shield, Users, ChartSpline, LayoutList, BadgeCheck, CircleArrowRight, Wrench, Wallet } from 'lucide-react';
 import { supabase } from './supabaseClient';
-import '/Users/robertlawless/Documents/benchlot-app/src/benchlot-styles.css';
-import { Routes, Route } from 'react-router-dom';
-import LandingPage from './benchlot-component.jsx';
-import SurveyPage from './SurveyComponent.jsx'
+import './benchlot-styles.css';
+import logo from '/Users/robertlawless/Documents/benchlot-app/src/assets/Benchlot.svg';
 
-const App = () => {
-  return (
-     <>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/survey" element={<SurveyPage />} />
-      </Routes>
-     </>
-  );
-};
-
-export default function LandingPage() {
+const LandingPage = () => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
@@ -63,7 +50,13 @@ export default function LandingPage() {
       {/* Header */}
       <header className="main-header">
         <div className="header-content">
-          <a href='MainLayout' className="logo">BENCHLOT</a>
+        <a href='MainLayout' className="logo-container"> 
+      <img 
+        src={logo} 
+        alt="Benchlot"
+        className="logo-image"  
+      />
+    </a>
         </div>
       </header>
       
@@ -249,3 +242,5 @@ export default function LandingPage() {
     </div>
   ); 
 }
+
+export default LandingPage;
