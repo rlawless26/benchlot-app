@@ -39,11 +39,11 @@ import {
 } from "./components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-import mainImage from '/Users/robertlawless/Documents/benchlot-app/src/assets/dewalt1.jpeg';  
-import image1 from '/Users/robertlawless/Documents/benchlot-app/src/assets/dewalt2.jpeg';
-import image2 from '/Users/robertlawless/Documents/benchlot-app/src/assets/dewalt3.jpeg';
-import image3 from '/Users/robertlawless/Documents/benchlot-app/src/assets/dewalt1.jpeg';
-import image4 from '/Users/robertlawless/Documents/benchlot-app/src/assets/dewalt1.jpeg';
+import mainImage from 'src/assets/dewalt1.jpeg';  
+import image1 from 'src/assets/dewalt2.jpeg';
+import image2 from 'src/assets/dewalt3.jpeg';
+import image3 from 'src/assets/dewalt1.jpeg';
+import image4 from 'src/assets/dewalt2.jpeg';
 
 const images = [mainImage, image1, image2, image3, image4];
 

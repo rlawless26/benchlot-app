@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
-import '/Users/robertlawless/Documents/benchlot-app/src/benchlot-styles.css';
+import './benchlot-styles.css';
 
 function SurveyPage() {
   const [currentSection, setCurrentSection] = useState(0);
