@@ -134,10 +134,12 @@ const Header = () => (
           <Button variant="ghost" size="icon" className="hover:text-accent">
             <User className="h-5 w-5" />
           </Button>
-          <Button className="hidden md:flex items-center gap-2 bg-accent hover:bg-accent/90 text-white">
-            <Plus className="h-4 w-4" />
-            List a Tool
-          </Button>
+          <Link to="/list-tool">
+  <Button className="hidden md:flex items-center gap-2 bg-accent hover:bg-accent/90 text-white">
+    <Plus className="h-4 w-4" />
+    List a Tool
+  </Button>
+</Link>
         </div>
       </div>
     </div>

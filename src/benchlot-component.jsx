@@ -3,6 +3,8 @@ import { Camera, Shield, Users, ChartSpline, LayoutList, BadgeCheck, CircleArrow
 import { supabase } from './supabaseClient';
 import './benchlot-styles.css';
 import logo from './assets/Benchlot.svg';
+import { Analytics } from '@vercel/analytics/react';
+
 
 const LandingPage = () => {
   const [email, setEmail] = useState('');
@@ -240,7 +242,8 @@ const LandingPage = () => {
           </div>
       </footer>
     </div>
+    
   ); 
 }
-
+<Analytics />
 export default LandingPage;

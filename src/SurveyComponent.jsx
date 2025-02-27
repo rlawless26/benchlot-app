@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './benchlot-styles.css';
+import { Analytics } from '@vercel/analytics/react';
+
 
 function SurveyPage() {
   const [currentSection, setCurrentSection] = useState(0);
@@ -471,7 +473,8 @@ function SurveyPage() {
         </div>
       </div>
     </div>
+    
   );
 }
-
+<Analytics />
 export default SurveyPage;
