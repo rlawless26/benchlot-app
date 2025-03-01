@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { supabase } from './supabaseClient';
-import './benchlot-styles.css';
+import { supabase } from '../supabaseClient';
+import '../benchlot-styles.css';
 import { Analytics } from '@vercel/analytics/react';
 
 

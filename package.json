@@ -15,7 +15,7 @@
     "lucide-react": "^x.x.x",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.5",
+    "react-router-dom": "^7.2.0",
     "react-scripts": "5.0.1",
     "recharts": "^2.15.1",
     "tailwind-merge": "^3.0.2",

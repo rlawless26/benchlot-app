@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Camera, Shield, Users, ChartSpline, LayoutList, BadgeCheck, CircleArrowRight, Wrench, Wallet } from 'lucide-react';
-import { supabase } from './supabaseClient';
-import './benchlot-styles.css';
-import logo from './assets/Benchlot.svg';
+import { supabase } from '../supabaseClient';
+import '../benchlot-styles.css';
+import logo from '../assets/Benchlot.svg';
 import { Analytics } from '@vercel/analytics/react';
 
 

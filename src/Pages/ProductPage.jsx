@@ -18,17 +18,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "./components/ui/dropdown-menu";
+} from "../components/ui/dropdown-menu";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent,
-} from "./components/ui/card";
-import { Badge } from "./components/ui/badge";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import { Separator } from "./components/ui/separator";
+} from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Separator } from "../components/ui/separator";
 import { Link } from 'react-router-dom';
 import {
   Select,
@@ -36,14 +36,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./components/ui/select";
+} from "../components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-import mainImage from './assets/dewalt1.jpeg';  
-import image1 from './assets/dewalt2.jpeg';
-import image2 from './assets/dewalt3.jpeg';
-import image3 from './assets/dewalt1.jpeg';
-import image4 from './assets/dewalt2.jpeg';
+import mainImage from '../assets/dewalt1.jpeg';  
+import image1 from '../assets/dewalt2.jpeg';
+import image2 from '../assets/dewalt3.jpeg';
+import image3 from '../assets/dewalt1.jpeg';
+import image4 from '../assets/dewalt2.jpeg';
 
 const images = [mainImage, image1, image2, image3, image4];
 
