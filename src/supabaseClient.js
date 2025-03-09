@@ -11,7 +11,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Auth helper functions (if you don't have them already)
 export const signUp = async (email, password, userData) => {
-  // Sign up with email and password
+  // Step 1: Sign up with email and password
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -24,10 +24,11 @@ export const signUp = async (email, password, userData) => {
     const { error: profileError } = await supabase
       .from('users')
       .insert({
-        id: authData.user.id,
+        id: authData.user.id,  // This must match the auth.uid
         username: userData.username,
         full_name: userData.fullName,
-        location: userData.location || 'Boston, MA', // Default location
+        location: userData.location || 'Boston, MA',
+        email: email  // Include email in the users table too
       });
       
     if (profileError) return { error: profileError };
@@ -54,16 +55,26 @@ export const getCurrentUser = async () => {
   
   if (error || !user) return { data: null, error };
   
-  // Get the user profile data
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  try {
+    // Get the user profile data
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
     
-  if (profileError) return { data: user, error: profileError };
-  
-  return { data: { ...user, profile }, error: null };
+    // Return the user even if profile fetch fails - allows auth without profile
+    return { 
+      data: { 
+        ...user, 
+        profile: profileError ? null : profile 
+      }, 
+      error: null 
+    };
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    return { data: { ...user, profile: null }, error };
+  }
 };
 
 // Tool listing functions
@@ -71,7 +82,7 @@ export const fetchTools = async (filters = {}) => {
   let query = supabase.from('tools')
     .select(`
       *,
-      seller:seller_id (id, username, full_name, avatar_url, rating, verified)
+      seller:seller_id (id, username, full_name, avatar_url, rating)
     `)
     .eq('is_sold', false);
   
@@ -152,7 +163,7 @@ export const fetchToolById = async (id) => {
     .from('tools')
     .select(`
       *,
-      seller:seller_id (id, username, full_name, avatar_url, rating, verified, location)
+      seller:seller_id (id, username, full_name, avatar_url, rating, location)
     `)
     .eq('id', id)
     .single();
@@ -165,7 +176,7 @@ export const fetchFeaturedTools = async (limit = 3) => {
     .from('tools')
     .select(`
       *,
-      seller:seller_id (id, username, full_name, avatar_url, rating, verified)
+      seller:seller_id (id, username, full_name, avatar_url, rating)
     `)
     .eq('is_featured', true)
     .eq('is_sold', false)
@@ -179,7 +190,7 @@ export const fetchSimilarTools = async (toolId, category, limit = 3) => {
     .from('tools')
     .select(`
       *,
-      seller:seller_id (id, username, full_name, avatar_url, rating, verified)
+      seller:seller_id (id, username, full_name, avatar_url, rating)
     `)
     .eq('category', category)
     .eq('is_sold', false)
@@ -359,7 +370,7 @@ export const fetchWishlist = async () => {
       tool_id,
       tool:tool_id (
         *,
-        seller:seller_id (id, username, full_name, avatar_url, rating, verified)
+        seller:seller_id (id, username, full_name, avatar_url, rating)
       )
     `)
     .eq('user_id', user.id);
@@ -445,7 +456,7 @@ export const fetchUserListings = async (userId) => {
     .from('tools')
     .select(`
       *,
-      seller:seller_id (id, username, full_name, avatar_url, rating, verified)
+      seller:seller_id (id, username, full_name, avatar_url, rating)
     `)
     .eq('seller_id', userId)
     .order('created_at', { ascending: false });

@@ -47,7 +47,8 @@ function App() {
         <Route path="/marketplace" element={<MarketplacePage />} />
         <Route path="/tool/:id" element={<ToolDetailPage />} />
         <Route path="/listtool" element={<ToolListingForm />} />
-        <Route path="/profile" element={<UserProfile/>} />
+        <Route path="/profile" element={<UserProfile />} />
+        <Route path="/profile/:id" element={<UserProfile />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/signup" element={<AuthPage mode="signup" />} />
       </Routes>

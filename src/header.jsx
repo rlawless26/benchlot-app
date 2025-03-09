@@ -182,7 +182,7 @@ const Header = () => {
                           My Profile
                         </Link>
                         
-                        <Link to="/my-listings" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-orange-50 hover:text-orange-700 text-sm">
+                        <Link to="/listtool" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-orange-50 hover:text-orange-700 text-sm">
                           <Hammer className="h-4 w-4" />
                           My Listings
                         </Link>
@@ -211,7 +211,7 @@ const Header = () => {
                   </div>
 
                   <Link 
-                    to="/tools/new" 
+                    to="/listtool" 
                     className="hidden md:flex items-center gap-2 px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded-md"
                   >
                     <Plus className="h-4 w-4" />
@@ -305,7 +305,7 @@ const Header = () => {
                       <Heart className="h-5 w-5" />
                       Saved Tools
                     </Link>
-                    <Link to="/tools/new" className="flex items-center gap-3 py-2 text-stone-700 hover:text-orange-700">
+                    <Link to="/listtool" className="flex items-center gap-3 py-2 text-stone-700 hover:text-orange-700">
                       <Plus className="h-5 w-5" />
                       List a Tool
                     </Link>
