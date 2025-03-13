@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sliders, 
   Check, 
@@ -8,12 +8,16 @@ import {
   Truck,
   SortAsc,
   Search,
-  MapPin
+  MapPin,
+  Loader
 } from 'lucide-react';
 
 // Import components
 import Header from '../header';
 import ToolListingCard from '../components/ToolListingCard';
+
+// Import Supabase functions
+import { fetchTools } from '../supabaseClient';
 
 const MarketplacePage = () => {
   // State for mobile filter panel
@@ -22,6 +26,14 @@ const MarketplacePage = () => {
   const [selectedCondition, setSelectedCondition] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 2000]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('featured');
+  
+  // Add loading and error states
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Add state for actual tool listings
+  const [toolListings, setToolListings] = useState([]);
   
   // Filter categories
   const categories = [
@@ -42,113 +54,38 @@ const MarketplacePage = () => {
     'Fair'
   ];
   
-  // Sample tool listings data
-  const toolListings = [
-    {
-      id: 1,
-      name: "Vintage Stanley No. 4 Plane",
-      condition: "Excellent",
-      originalPrice: 180,
-      currentPrice: 125,
-      location: "Cambridge, MA",
-      image: "/api/placeholder/300/200",
-      isVerified: true,
-      rating: 4.5,
-      reviewCount: 12,
-      seller: {
-        name: "John Smith",
-        rating: 4.8,
-        verified: true
-      },
-      featured: true
-    },
-    {
-      id: 2,
-      name: "DeWalt Table Saw (10-inch)",
-      condition: "Good",
-      originalPrice: 599,
-      currentPrice: 350,
-      location: "Somerville, MA",
-      image: "/api/placeholder/300/200",
-      isVerified: true,
-      rating: 4.2,
-      reviewCount: 7,
-      seller: {
-        name: "Mike Johnson",
-        rating: 4.5,
-        verified: false
+  // Fetch tools from Supabase when filters change
+  useEffect(() => {
+    const loadTools = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Prepare filter object for the API call
+        const filters = {
+          category: selectedCategory !== 'All Categories' ? selectedCategory : undefined,
+          condition: selectedCondition.length > 0 ? selectedCondition : undefined,
+          minPrice: priceRange[0],
+          maxPrice: priceRange[1],
+          search: searchQuery || undefined,
+          sort: sortBy
+        };
+        
+        const { data, error } = await fetchTools(filters);
+        
+        if (error) throw error;
+        
+        setToolListings(data || []);
+      } catch (err) {
+        console.error('Error loading tools:', err);
+        setError('Failed to load tools. Please try again.');
+      } finally {
+        setLoading(false);
       }
-    },
-    {
-      id: 3,
-      name: "Festool Domino Joiner DF 500",
-      condition: "Like New",
-      originalPrice: 1200,
-      currentPrice: 850,
-      location: "Boston, MA",
-      image: "/api/placeholder/300/200",
-      isVerified: true,
-      rating: 4.8,
-      reviewCount: 15,
-      seller: {
-        name: "Sarah Williams",
-        rating: 4.9,
-        verified: true
-      }
-    },
-    {
-      id: 4,
-      name: "Lie-Nielsen No. 7 Jointer Plane",
-      condition: "Very Good",
-      originalPrice: 425,
-      currentPrice: 325,
-      location: "Cambridge, MA",
-      image: "/api/placeholder/300/200",
-      isVerified: false,
-      rating: 4.6,
-      reviewCount: 4,
-      seller: {
-        name: "Chris Taylor",
-        rating: 4.7,
-        verified: true
-      }
-    },
-    {
-      id: 5,
-      name: "Powermatic Bandsaw",
-      condition: "Good",
-      originalPrice: 1299,
-      currentPrice: 750,
-      location: "Medford, MA",
-      image: "/api/placeholder/300/200",
-      isVerified: true,
-      rating: 4.3,
-      reviewCount: 9,
-      seller: {
-        name: "Robert Chen",
-        rating: 4.6,
-        verified: false
-      }
-    },
-    {
-      id: 6,
-      name: "Woodpeckers Precision Router Table",
-      condition: "Excellent",
-      originalPrice: 699,
-      currentPrice: 450,
-      location: "Newton, MA",
-      image: "/api/placeholder/300/200",
-      isVerified: true,
-      rating: 4.7,
-      reviewCount: 11,
-      seller: {
-        name: "Emma Davis",
-        rating: 4.8,
-        verified: true
-      },
-      featured: true
-    }
-  ];
+    };
+    
+    loadTools();
+  }, [selectedCategory, selectedCondition, priceRange, searchQuery, sortBy]);
   
   // Toggle condition filter
   const toggleCondition = (condition) => {
@@ -159,28 +96,23 @@ const MarketplacePage = () => {
     }
   };
   
-  // Filter tools based on selected filters
-  const filteredTools = toolListings.filter(tool => {
-    // Filter by condition if any conditions are selected
-    if (selectedCondition.length > 0 && !selectedCondition.includes(tool.condition)) {
-      return false;
-    }
-    
-    // Filter by search query
-    if (searchQuery && !tool.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    
-    // Filter by price range
-    if (tool.currentPrice < priceRange[0] || tool.currentPrice > priceRange[1]) {
-      return false;
-    }
-    
-    return true;
-  });
+  // Handle sort change
+  const handleSortChange = (sortValue) => {
+    setSortBy(sortValue);
+  };
+  
+  // Reset filters
+  const resetFilters = () => {
+    setSelectedCategory('All Categories');
+    setSelectedCondition([]);
+    setPriceRange([0, 2000]);
+    setSearchQuery('');
+  };
+  
+  // Filter tools function is no longer needed as we're filtering on the server side
   
   return (
-    <div className="bg-stone-50 min-h-screen">
+    <div className="bg-base min-h-screen">
       <Header />
       
       {/* Page content */}
@@ -210,7 +142,7 @@ const MarketplacePage = () => {
                         name="category"
                         checked={selectedCategory === category}
                         onChange={() => setSelectedCategory(category)}
-                        className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                        className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                       />
                       <label htmlFor={`category-${category}`} className="text-sm text-stone-700">
                         {category}
@@ -231,7 +163,7 @@ const MarketplacePage = () => {
                         id={`condition-${condition}`}
                         checked={selectedCondition.includes(condition)}
                         onChange={() => toggleCondition(condition)}
-                        className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                        className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                       />
                       <label htmlFor={`condition-${condition}`} className="text-sm text-stone-700">
                         {condition}
@@ -250,7 +182,7 @@ const MarketplacePage = () => {
                     type="number"
                     min="0"
                     value={priceRange[0]}
-                    onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                    onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
                     className="w-full px-3 py-1 border border-stone-300 rounded-md text-sm"
                   />
                   <span className="text-sm text-stone-600">to</span>
@@ -259,7 +191,7 @@ const MarketplacePage = () => {
                     type="number"
                     min="0"
                     value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 2000])}
                     className="w-full px-3 py-1 border border-stone-300 rounded-md text-sm"
                   />
                 </div>
@@ -291,7 +223,7 @@ const MarketplacePage = () => {
                     <label className="flex items-center text-sm text-stone-700">
                       <input
                         type="checkbox"
-                        className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                        className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                       />
                       Within 10 miles
                     </label>
@@ -304,14 +236,17 @@ const MarketplacePage = () => {
                 <label className="flex items-center text-stone-700">
                   <input
                     type="checkbox"
-                    className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                    className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                   />
                   Verified tools only
                 </label>
               </div>
               
               {/* Reset Filters */}
-              <button className="w-full py-2 border border-stone-300 rounded-md text-stone-700 hover:bg-stone-50 text-sm">
+              <button 
+                className="w-full py-2 border border-stone-300 rounded-md text-stone-700 hover:bg-stone-50 text-sm"
+                onClick={resetFilters}
+              >
                 Reset Filters
               </button>
             </div>
@@ -328,7 +263,7 @@ const MarketplacePage = () => {
                   placeholder="Search tools..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                 />
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-stone-400" />
               </div>
@@ -347,21 +282,36 @@ const MarketplacePage = () => {
                 <button className="w-full md:w-auto flex items-center justify-between gap-2 px-4 py-2 border border-stone-300 rounded-md text-stone-700">
                   <div className="flex items-center gap-2">
                     <SortAsc className="h-4 w-4" />
-                    <span>Sort by: Featured</span>
+                    <span>Sort by: {sortBy === 'newest' ? 'Newest' : 
+                             sortBy === 'price_low' ? 'Price: Low to High' : 
+                             sortBy === 'price_high' ? 'Price: High to Low' : 
+                             'Featured'}</span>
                   </div>
                   <ChevronDown className="h-4 w-4" />
                 </button>
                 <div className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md p-1 min-w-[200px] hidden group-hover:block z-10">
-                  <button className="w-full text-left px-3 py-2 text-stone-700 hover:bg-orange-50 hover:text-orange-700 rounded-md text-sm">
+                  <button 
+                    className="w-full text-left px-3 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 rounded-md text-sm"
+                    onClick={() => handleSortChange('featured')}
+                  >
                     Featured
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-stone-700 hover:bg-orange-50 hover:text-orange-700 rounded-md text-sm">
+                  <button 
+                    className="w-full text-left px-3 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 rounded-md text-sm"
+                    onClick={() => handleSortChange('price_low')}
+                  >
                     Price: Low to High
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-stone-700 hover:bg-orange-50 hover:text-orange-700 rounded-md text-sm">
+                  <button 
+                    className="w-full text-left px-3 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 rounded-md text-sm"
+                    onClick={() => handleSortChange('price_high')}
+                  >
                     Price: High to Low
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-stone-700 hover:bg-orange-50 hover:text-orange-700 rounded-md text-sm">
+                  <button 
+                    className="w-full text-left px-3 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 rounded-md text-sm"
+                    onClick={() => handleSortChange('newest')}
+                  >
                     Newest First
                   </button>
                 </div>
@@ -370,16 +320,18 @@ const MarketplacePage = () => {
             
             {/* Results summary */}
             <div className="flex items-center justify-between mb-4">
-              <p className="text-stone-600">Showing {filteredTools.length} results</p>
+              <p className="text-stone-600">
+                {loading ? 'Loading tools...' : `Showing ${toolListings.length} results`}
+              </p>
               
               {/* Active filters */}
               {selectedCondition.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {selectedCondition.map((condition) => (
-                    <span key={condition} className="inline-flex items-center bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
+                    <span key={condition} className="inline-flex items-center bg-forest-100 text-forest-800 text-xs px-2 py-1 rounded-full">
                       {condition}
                       <button 
-                        className="ml-1 text-orange-800" 
+                        className="ml-1 text-forest-800" 
                         onClick={() => toggleCondition(condition)}
                       >
                         <X className="h-3 w-3" />
@@ -388,7 +340,7 @@ const MarketplacePage = () => {
                   ))}
                   
                   <button 
-                    className="text-xs text-orange-700 hover:text-orange-800"
+                    className="text-xs text-forest-700 hover:text-forest-800"
                     onClick={() => setSelectedCondition([])}
                   >
                     Clear all
@@ -397,29 +349,42 @@ const MarketplacePage = () => {
               )}
             </div>
             
+            {/* Loading state */}
+            {loading && (
+              <div className="flex justify-center items-center py-12">
+                <Loader className="h-8 w-8 text-forest-700 animate-spin" />
+                <span className="ml-2 text-stone-600">Loading tools...</span>
+              </div>
+            )}
+            
+            {/* Error state */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
+                {error}
+              </div>
+            )}
+            
             {/* Grid of listings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTools.map((tool) => (
-                <ToolListingCard 
-                  key={tool.id} 
-                  tool={tool} 
-                  featured={tool.featured}
-                />
-              ))}
-            </div>
+            {!loading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {toolListings.map((tool) => (
+                  <ToolListingCard 
+                    key={tool.id} 
+                    tool={tool} 
+                    featured={tool.is_featured}
+                  />
+                ))}
+              </div>
+            )}
             
             {/* Empty state */}
-            {filteredTools.length === 0 && (
+            {!loading && !error && toolListings.length === 0 && (
               <div className="text-center py-12">
                 <h3 className="text-lg font-medium text-stone-800 mb-2">No tools found</h3>
                 <p className="text-stone-600 mb-6">Try adjusting your filters or search criteria</p>
                 <button 
-                  className="px-4 py-2 bg-orange-700 text-white rounded-md hover:bg-orange-800"
-                  onClick={() => {
-                    setSelectedCondition([]);
-                    setSearchQuery('');
-                    setPriceRange([0, 2000]);
-                  }}
+                  className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
+                  onClick={resetFilters}
                 >
                   Reset Filters
                 </button>
@@ -461,7 +426,7 @@ const MarketplacePage = () => {
                             name="mobile-category"
                             checked={selectedCategory === category}
                             onChange={() => setSelectedCategory(category)}
-                            className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                            className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                           />
                           <label htmlFor={`mobile-category-${category}`} className="text-sm text-stone-700">
                             {category}
@@ -482,7 +447,7 @@ const MarketplacePage = () => {
                             id={`mobile-condition-${condition}`}
                             checked={selectedCondition.includes(condition)}
                             onChange={() => toggleCondition(condition)}
-                            className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                            className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                           />
                           <label htmlFor={`mobile-condition-${condition}`} className="text-sm text-stone-700">
                             {condition}
@@ -501,7 +466,7 @@ const MarketplacePage = () => {
                         type="number"
                         min="0"
                         value={priceRange[0]}
-                        onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                        onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
                         className="w-full px-3 py-1 border border-stone-300 rounded-md text-sm"
                       />
                       <span className="text-sm text-stone-600">to</span>
@@ -510,7 +475,7 @@ const MarketplacePage = () => {
                         type="number"
                         min="0"
                         value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 2000])}
                         className="w-full px-3 py-1 border border-stone-300 rounded-md text-sm"
                       />
                     </div>
@@ -532,7 +497,7 @@ const MarketplacePage = () => {
                         <label className="flex items-center text-sm text-stone-700">
                           <input
                             type="checkbox"
-                            className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                            className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                           />
                           Within 10 miles
                         </label>
@@ -545,7 +510,7 @@ const MarketplacePage = () => {
                     <label className="flex items-center text-stone-700">
                       <input
                         type="checkbox"
-                        className="mr-2 h-4 w-4 text-orange-700 focus:ring-orange-500"
+                        className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                       />
                       Verified tools only
                     </label>
@@ -557,15 +522,12 @@ const MarketplacePage = () => {
                   <div className="flex gap-4">
                     <button 
                       className="flex-1 px-4 py-2 border border-stone-300 rounded-md text-stone-700 hover:bg-stone-50"
-                      onClick={() => {
-                        setSelectedCondition([]);
-                        setPriceRange([0, 2000]);
-                      }}
+                      onClick={resetFilters}
                     >
                       Reset
                     </button>
                     <button 
-                      className="flex-1 px-4 py-2 bg-orange-700 text-white rounded-md hover:bg-orange-800"
+                      className="flex-1 px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
                       onClick={() => setMobileFiltersOpen(false)}
                     >
                       Apply Filters

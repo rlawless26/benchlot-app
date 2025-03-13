@@ -117,7 +117,7 @@ const AuthPage = ({ mode = 'login' }) => {
   };
   
   return (
-    <div className="bg-stone-50 min-h-screen">
+    <div className="bg-base min-h-screen">
       <Header />
       
       <main className="max-w-md mx-auto px-4 py-12">
@@ -160,7 +160,7 @@ const AuthPage = ({ mode = 'login' }) => {
                       id="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                      className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                       placeholder="Choose a username"
                       required
                     />
@@ -177,7 +177,7 @@ const AuthPage = ({ mode = 'login' }) => {
                     id="fullName"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                    className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                     placeholder="Your full name"
                   />
                 </div>
@@ -191,7 +191,7 @@ const AuthPage = ({ mode = 'login' }) => {
                       id="userLocation"
                       value={userLocation}
                       onChange={(e) => setUserLocation(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700 appearance-none"
+                      className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700 appearance-none"
                     >
                       {locations.map(loc => (
                         <option key={loc} value={loc}>{loc}</option>
@@ -213,7 +213,7 @@ const AuthPage = ({ mode = 'login' }) => {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="Enter your email"
                   required
                 />
@@ -231,7 +231,7 @@ const AuthPage = ({ mode = 'login' }) => {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder={mode === 'signup' ? 'Create a password' : 'Enter your password'}
                   required
                 />
@@ -255,7 +255,7 @@ const AuthPage = ({ mode = 'login' }) => {
                     id="confirmPassword"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                    className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                     placeholder="Confirm your password"
                     required
                   />
@@ -266,7 +266,7 @@ const AuthPage = ({ mode = 'login' }) => {
             
             {mode === 'login' && (
               <div className="flex justify-end mb-6">
-                <a href="#" className="text-sm text-orange-700 hover:text-orange-800">
+                <a href="#" className="text-sm text-forest-700 hover:text-forest-800">
                   Forgot password?
                 </a>
               </div>
@@ -274,7 +274,7 @@ const AuthPage = ({ mode = 'login' }) => {
             
             <button
               type="submit"
-              className="w-full py-3 bg-orange-700 hover:bg-orange-800 text-white rounded-md font-medium mb-4 flex justify-center items-center"
+              className="w-full py-3 bg-forest-700 hover:bg-forest-800 text-white rounded-md font-medium mb-4 flex justify-center items-center"
               disabled={loading}
             >
               {loading ? (
@@ -291,14 +291,14 @@ const AuthPage = ({ mode = 'login' }) => {
               {mode === 'signup' ? (
                 <>
                   Already have an account?{' '}
-                  <Link to="/login" className="text-orange-700 hover:text-orange-800 font-medium">
+                  <Link to="/login" className="text-forest-700 hover:text-forest-800 font-medium">
                     Sign In
                   </Link>
                 </>
               ) : (
                 <>
                   Don't have an account?{' '}
-                  <Link to="/signup" className="text-orange-700 hover:text-orange-800 font-medium">
+                  <Link to="/signup" className="text-forest-700 hover:text-forest-800 font-medium">
                     Create an Account
                   </Link>
                 </>
@@ -310,9 +310,9 @@ const AuthPage = ({ mode = 'login' }) => {
         <div className="mt-8 text-center text-stone-600 text-sm">
           <p>By continuing, you agree to Benchlot's</p>
           <div className="mt-1">
-            <a href="#" className="text-orange-700 hover:text-orange-800">Terms of Service</a>
+            <a href="#" className="text-forest-700 hover:text-forest-800">Terms of Service</a>
             {' and '}
-            <a href="#" className="text-orange-700 hover:text-orange-800">Privacy Policy</a>
+            <a href="#" className="text-forest-700 hover:text-forest-800">Privacy Policy</a>
           </div>
         </div>
       </main>

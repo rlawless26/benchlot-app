@@ -263,7 +263,6 @@ export const markToolAsSold = async (id) => {
   return { data, error };
 };
 
-// Image Upload
 export const uploadToolImage = async (file, toolId) => {
   const { data: user } = await getCurrentUser();
   if (!user) return { error: { message: 'You must be logged in to upload images' } };
@@ -277,6 +276,8 @@ export const uploadToolImage = async (file, toolId) => {
   const fileName = `${toolId}_${imageCount}.${fileExt}`;
   const filePath = `tools/${toolId}/${fileName}`;
   
+  console.log("Uploading image to path:", filePath);
+  
   // Upload the file
   const { data, error } = await supabase.storage
     .from('tool-images')
@@ -285,50 +286,31 @@ export const uploadToolImage = async (file, toolId) => {
       upsert: true
     });
   
-  if (error) return { error };
+  if (error) {
+    console.error("Storage upload error:", error);
+    return { error };
+  }
   
-  // Get the public URL
-  const { data: { publicUrl } } = supabase.storage
+  // Get a signed URL with a long expiration (e.g., 1 week)
+  const { data: signedUrlData } = await supabase.storage
     .from('tool-images')
-    .getPublicUrl(filePath);
+    .createSignedUrl(filePath, 60 * 60 * 24 * 7); // 7 days expiration
+  
+  const signedUrl = signedUrlData.signedUrl;
+  console.log("Generated signed URL:", signedUrl);
   
   // Update the tool with the new image URL
   const { data: updatedTool, error: updateError } = await supabase
     .from('tools')
     .update({
-      images: [...(tool?.images || []), publicUrl],
+      images: [...(tool?.images || []), signedUrl],
       updated_at: new Date().toISOString(),
     })
     .eq('id', toolId)
-    .eq('seller_id', user.id) // Enforce ownership
+    .eq('seller_id', user.id)
     .select();
   
-  return { data: { ...updatedTool, publicUrl }, error: updateError };
-};
-
-export const removeToolImage = async (toolId, imageUrl) => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { error: { message: 'You must be logged in to remove images' } };
-  
-  // Get current images
-  const { data: tool } = await fetchToolById(toolId);
-  if (!tool || !tool.images) return { error: { message: 'Tool not found' } };
-  
-  // Filter out the removed image
-  const updatedImages = tool.images.filter(url => url !== imageUrl);
-  
-  // Update the tool
-  const { data, error } = await supabase
-    .from('tools')
-    .update({
-      images: updatedImages,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', toolId)
-    .eq('seller_id', user.id) // Enforce ownership
-    .select();
-  
-  return { data, error };
+  return { data: { ...updatedTool, signedUrl }, error: updateError };
 };
 
 // Wishlist functions
@@ -423,23 +405,29 @@ export const uploadProfileImage = async (file) => {
       upsert: true
     });
   
-  if (error) return { error };
+  if (error) {
+    console.error("Storage upload error:", error);
+    return { error };
+  }
   
-  // Get the public URL
-  const { data: { publicUrl } } = supabase.storage
+  // Get a signed URL with a long expiration (e.g., 30 days for profile images)
+  const { data: signedUrlData } = await supabase.storage
     .from('user-images')
-    .getPublicUrl(filePath);
+    .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 days expiration
+  
+  const signedUrl = signedUrlData.signedUrl;
+  console.log("Generated signed URL for profile image:", signedUrl);
   
   // Update the user profile
   const { data: updatedProfile, error: updateError } = await supabase
     .from('users')
     .update({
-      avatar_url: publicUrl,
+      avatar_url: signedUrl,
     })
     .eq('id', user.id)
     .select();
   
-  return { data: { ...updatedProfile, publicUrl }, error: updateError };
+  return { data: { ...updatedProfile, signedUrl }, error: updateError };
 };
 
 // Get user's listings
@@ -598,6 +586,56 @@ export const markMessagesAsRead = async (otherUserId) => {
     .eq('recipient_id', user.id)
     .eq('sender_id', otherUserId)
     .eq('is_read', false);
+  
+  return { data, error };
+};
+// Add this function to your supabaseClient.js file
+
+export const removeToolImage = async (toolId, imageUrl) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to remove images' } };
+  
+  // Get current images
+  const { data: tool } = await fetchToolById(toolId);
+  if (!tool || !tool.images) return { error: { message: 'Tool not found' } };
+  
+  // Filter out the removed image
+  const updatedImages = tool.images.filter(url => url !== imageUrl);
+  
+  // Update the tool
+  const { data, error } = await supabase
+    .from('tools')
+    .update({
+      images: updatedImages,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', toolId)
+    .eq('seller_id', user.id) // Enforce ownership
+    .select();
+  
+  // Attempt to remove the file from storage (best effort)
+  try {
+    // Extract the file path from the URL
+    const url = new URL(imageUrl);
+    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/tool-images\/(.+)/);
+    
+    if (pathMatch && pathMatch[1]) {
+      const filePath = pathMatch[1];
+      
+      // Remove from storage (don't wait for this to complete)
+      supabase.storage
+        .from('tool-images')
+        .remove([filePath])
+        .then(({ error }) => {
+          if (error) {
+            console.error("Failed to remove file from storage:", error);
+          }
+        });
+    }
+  } catch (storageError) {
+    console.error("Error parsing image URL:", storageError);
+    // Continue anyway - updating the database is more important than cleaning storage
+  }
   
   return { data, error };
 };

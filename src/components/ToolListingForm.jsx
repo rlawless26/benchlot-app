@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
   Upload, 
   X, 
@@ -25,7 +25,15 @@ import Header from '../header';
 
 const ToolListingForm = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: paramId } = useParams();
+  
+  // Add this to support query parameter approach
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const queryId = queryParams.get('id');
+  
+  // Use either the route param or query param
+  const id = paramId || queryId;
   const isEditing = id && id !== 'new';
   
   // Form state
@@ -107,6 +115,7 @@ const ToolListingForm = () => {
   // Fetch tool data if editing
   useEffect(() => {
     if (isEditing && user) {
+      console.log("Fetching tool data for ID:", id);
       const fetchToolData = async () => {
         setLoading(true);
         const { data, error } = await fetchToolById(id);
@@ -303,10 +312,14 @@ const ToolListingForm = () => {
       
       if (result.error) throw result.error;
       
+      console.log("API result:", result);
+      
       const toolId = result.data.id;
+      console.log("Tool ID for redirect:", toolId);
       
       // Upload images if any new ones were added
       if (imageFiles.length > 0) {
+        console.log("Uploading images for tool ID:", toolId);
         const uploadResult = await uploadImages(toolId);
         if (!uploadResult.success) throw uploadResult.error;
       }
@@ -314,12 +327,17 @@ const ToolListingForm = () => {
       // Success!
       setSuccess(true);
       
-      // Redirect after a short delay
-      setTimeout(() => {
-        navigate(`/tool/${toolId}`);
-      }, 1500);
+      // Store the ID in localStorage as a backup
+      localStorage.setItem('lastCreatedToolId', toolId);
+      
+      console.log("Successfully created tool with ID:", toolId);
+      console.log("Navigating to:", `/tool/${toolId}`);
+      
+      // Use direct browser navigation instead of React Router
+      window.location.href = `/tool/${toolId}`;
       
     } catch (error) {
+      console.error("Error in handleSubmit:", error);
       setError(error.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
@@ -328,11 +346,11 @@ const ToolListingForm = () => {
   
   if (loading) {
     return (
-      <div className="bg-stone-50 min-h-screen">
+      <div className="bg-base min-h-screen">
         <Header />
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
-            <Loader className="h-8 w-8 text-orange-700 animate-spin" />
+            <Loader className="h-8 w-8 text-forest-700 animate-spin" />
             <span className="ml-2 text-stone-600">Loading...</span>
           </div>
         </main>
@@ -341,7 +359,7 @@ const ToolListingForm = () => {
   }
 
   return (
-    <div className="bg-stone-50 min-h-screen">
+    <div className="bg-base min-h-screen">
       <Header />
       
       <main className="max-w-4xl mx-auto px-4 py-8">
@@ -386,7 +404,7 @@ const ToolListingForm = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. Stanley No. 4 Smoothing Plane"
                   required
                 />
@@ -401,7 +419,7 @@ const ToolListingForm = () => {
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   required
                 >
                   <option value="">Select a category</option>
@@ -422,7 +440,7 @@ const ToolListingForm = () => {
                   name="subcategory"
                   value={formData.subcategory}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   disabled={!formData.category}
                 >
                   <option value="">Select a subcategory</option>
@@ -441,7 +459,7 @@ const ToolListingForm = () => {
                   name="condition"
                   value={formData.condition}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   required
                 >
                   <option value="">Select condition</option>
@@ -460,7 +478,7 @@ const ToolListingForm = () => {
                   name="location"
                   value={formData.location}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   required
                 >
                   <option value="">Select location</option>
@@ -480,7 +498,7 @@ const ToolListingForm = () => {
                   name="current_price"
                   value={formData.current_price}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. 125"
                   min="0"
                   step="0.01"
@@ -498,7 +516,7 @@ const ToolListingForm = () => {
                   name="original_price"
                   value={formData.original_price}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. 175"
                   min="0"
                   step="0.01"
@@ -520,7 +538,7 @@ const ToolListingForm = () => {
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700 min-h-32"
+                className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700 min-h-32"
                 placeholder="Describe your tool, including its condition, history, and any notable features."
                 rows="5"
                 required
@@ -543,7 +561,7 @@ const ToolListingForm = () => {
                   name="brand"
                   value={formData.brand}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. Stanley"
                 />
               </div>
@@ -558,7 +576,7 @@ const ToolListingForm = () => {
                   name="model"
                   value={formData.model}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. No. 4"
                 />
               </div>
@@ -573,7 +591,7 @@ const ToolListingForm = () => {
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. 1950s"
                 />
               </div>
@@ -588,7 +606,7 @@ const ToolListingForm = () => {
                   name="material"
                   value={formData.material}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. Cast Iron, Hardwood"
                 />
               </div>
@@ -603,7 +621,7 @@ const ToolListingForm = () => {
                   name="dimensions"
                   value={formData.dimensions}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                   placeholder="e.g. 9 inches x 2-3/8 inches"
                 />
               </div>
@@ -634,7 +652,7 @@ const ToolListingForm = () => {
                       <X className="h-4 w-4" />
                     </button>
                     {index === 0 && (
-                      <span className="absolute bottom-1 left-1 bg-orange-700 text-white text-xs px-2 py-1 rounded-full">
+                      <span className="absolute bottom-1 left-1 bg-forest-700 text-white text-xs px-2 py-1 rounded-full">
                         Main
                       </span>
                     )}
@@ -643,7 +661,7 @@ const ToolListingForm = () => {
                 
                 {/* Add image button */}
                 {images.length < 5 && (
-                  <label className="border-2 border-dashed border-stone-300 rounded-md flex flex-col items-center justify-center h-32 cursor-pointer hover:border-orange-300">
+                  <label className="border-2 border-dashed border-stone-300 rounded-md flex flex-col items-center justify-center h-32 cursor-pointer hover:border-forest-300">
                     <input 
                       type="file"
                       accept="image/*"
@@ -662,7 +680,7 @@ const ToolListingForm = () => {
                 <div className="mb-4">
                   <div className="w-full bg-stone-200 rounded-full h-2.5">
                     <div 
-                      className="bg-orange-700 h-2.5 rounded-full" 
+                      className="bg-forest-700 h-2.5 rounded-full" 
                       style={{ width: `${uploadStatus.progress}%` }}
                     ></div>
                   </div>
@@ -692,7 +710,7 @@ const ToolListingForm = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded-md flex items-center"
+              className="px-6 py-2 bg-forest-700 hover:bg-forest-800 text-white rounded-md flex items-center"
               disabled={submitting}
             >
               {submitting ? (

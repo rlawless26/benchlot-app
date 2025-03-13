@@ -1,383 +1,565 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
+  Heart, 
+  Share, 
+  MessageSquare, 
+  MapPin, 
+  Star, 
+  Check, 
   ChevronLeft,
-  Heart,
-  Share,
-  Flag,
-  MapPin,
-  Calendar,
-  Check,
-  X,
-  MessageSquare,
-  Star,
   ChevronRight,
-  Info,
-  Shield,
-  Clock
+  ArrowLeft,
+  Loader,
+  AlertCircle
 } from 'lucide-react';
 
-// Import components
+// Import Supabase client and helpers
+import { 
+  fetchToolById, 
+  fetchSimilarTools, 
+  addToWishlist, 
+  removeFromWishlist, 
+  isToolInWishlist,
+  getCurrentUser
+} from '../supabaseClient';
+
+// Import Header component
 import Header from '../header';
 
 const ToolDetailPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
+  // State variables
+  const [tool, setTool] = useState(null);
+  const [similarTools, setSimilarTools] = useState([]);
+  const [user, setUser] = useState(null);
+  const [inWishlist, setInWishlist] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Sample tool data
-  const toolData = {
-    id: 1,
-    name: "Vintage Stanley No. 4 Smoothing Plane",
-    condition: "Excellent",
-    originalPrice: 180,
-    currentPrice: 125,
-    location: "Cambridge, MA",
-    distance: "2.4 miles away",
-    description: "Vintage Stanley No. 4 smoothing plane from the 1950s in excellent condition. The plane has been fully restored and tuned. The blade is sharp and ready to use. This is a perfect addition to any woodworker's collection. Includes the original box and paperwork.",
-    isVerified: true,
-    datePosted: "3 days ago",
-    images: [
-      "/api/placeholder/600/400",
-      "/api/placeholder/600/400",
-      "/api/placeholder/600/400",
-      "/api/placeholder/600/400"
-    ],
-    specifications: [
-      { name: "Brand", value: "Stanley" },
-      { name: "Model", value: "No. 4" },
-      { name: "Type", value: "Smoothing Plane" },
-      { name: "Age", value: "1950s (Type 16)" },
-      { name: "Material", value: "Cast Iron, Hardwood" },
-      { name: "Length", value: "9 inches" },
-      { name: "Width", value: "2-3/8 inches" },
-      { name: "Blade Type", value: "High Carbon Steel" }
-    ],
-    condition_details: {
-      level: "Excellent",
-      description: "This tool has been well-maintained and shows only minimal signs of previous use. It has been cleaned, tuned, and is ready for immediate use.",
-      notable_features: [
-        "Original japanning at 90%+",
-        "No rust or pitting",
-        "Tote and knob in excellent condition",
-        "Blade has plenty of life left",
-        "Mechanics function smoothly"
-      ]
-    },
-    seller: {
-      id: 101,
-      name: "John Smith",
-      rating: 4.8,
-      reviewCount: 23,
-      memberSince: "March 2022",
-      verified: true,
-      responseRate: "98%",
-      responseTime: "Usually responds in under 2 hours",
-      location: "Cambridge, MA",
-      image: "/api/placeholder/80/80"
-    },
-    similar_tools: [
-      {
-        id: 2,
-        name: "Stanley No. 5 Jack Plane",
-        price: 135,
-        condition: "Very Good",
-        image: "/api/placeholder/120/120"
-      },
-      {
-        id: 3,
-        name: "Lie-Nielsen No. 4 Plane",
-        price: 285,
-        condition: "Like New",
-        image: "/api/placeholder/120/120"
-      },
-      {
-        id: 4,
-        name: "Record No. 4 Plane",
-        price: 110,
-        condition: "Good",
-        image: "/api/placeholder/120/120"
+  console.log("ToolDetailPage - ID from URL params:", id);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await getCurrentUser();
+      setUser(data);
+    };
+    
+    checkUser();
+  }, []);
+  
+  // Fetch tool data and check wishlist status
+  useEffect(() => {
+    const loadToolData = async () => {
+      // Get URL parameter ID
+      let toolId = id;
+      console.log("ID from URL params:", toolId);
+      
+      // If no ID in URL or it doesn't look valid, check localStorage
+      if (!toolId || toolId.length < 30) {
+        const savedId = localStorage.getItem('lastCreatedToolId');
+        if (savedId) {
+          console.log("Using ID from localStorage instead:", savedId);
+          toolId = savedId;
+          // Update the URL without reloading the page
+          window.history.replaceState(null, '', `/tool/${savedId}`);
+          // Clear localStorage to avoid using this ID again
+          localStorage.removeItem('lastCreatedToolId');
+        }
       }
-    ]
+      
+      if (!toolId) {
+        setError('No valid tool ID provided');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      
+      try {
+        console.log("Fetching tool with ID:", toolId);
+        const { data, error } = await fetchToolById(toolId);
+        
+        console.log("API response:", { data, error });
+        
+        if (error) {
+          console.error("API error:", error);
+          throw error;
+        }
+        
+        if (!data) {
+          console.error("No tool data returned for ID:", toolId);
+          throw new Error('No tool found with this ID');
+        }
+        
+        setTool(data);
+        
+        // Fetch similar tools
+        if (data.category) {
+          const { data: similarData } = await fetchSimilarTools(toolId, data.category, 3);
+          setSimilarTools(similarData || []);
+        }
+        
+        // Check if tool is in user's wishlist
+        if (user) {
+          const { data: wishlistStatus } = await isToolInWishlist(toolId);
+          setInWishlist(wishlistStatus);
+        }
+      } catch (err) {
+        console.error('Error loading tool:', err);
+        setError('Failed to load tool details: ' + (err.message || 'Unknown error'));
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadToolData();
+  }, [id, user]);
+  
+  // Toggle wishlist status
+  const toggleWishlist = async () => {
+    if (!user) {
+      // Redirect to login or show login modal
+      navigate('/login', { state: { from: `/tool/${id}` } });
+      return;
+    }
+    
+    try {
+      if (inWishlist) {
+        await removeFromWishlist(tool.id);
+      } else {
+        await addToWishlist(tool.id);
+      }
+      
+      setInWishlist(!inWishlist);
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
+      // Show error message to user
+    }
   };
   
-  // Function to navigate to the next image
-  const nextImage = () => {
-    setActiveImageIndex((activeImageIndex + 1) % toolData.images.length);
+  // Format price with $ and commas
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(price);
   };
   
-  // Function to navigate to the previous image
+  // Navigate to previous image
   const prevImage = () => {
-    setActiveImageIndex((activeImageIndex - 1 + toolData.images.length) % toolData.images.length);
+    if (tool?.images?.length > 0) {
+      setActiveImageIndex((prev) => 
+        prev === 0 ? tool.images.length - 1 : prev - 1
+      );
+    }
   };
   
-  // Function to select a specific image
-  const selectImage = (index) => {
-    setActiveImageIndex(index);
+  // Navigate to next image
+  const nextImage = () => {
+    if (tool?.images?.length > 0) {
+      setActiveImageIndex((prev) => 
+        prev === tool.images.length - 1 ? 0 : prev + 1
+      );
+    }
   };
   
+  // Start a conversation with the seller
+  const contactSeller = () => {
+    if (!user) {
+      navigate('/login', { state: { from: `/tool/${id}` } });
+      return;
+    }
+    
+    // Navigate to messages or open message modal
+    // This will depend on your app's messaging implementation
+    navigate('/messages', { state: { recipient: tool.seller_id, toolId: tool.id } });
+  };
+  
+  // If loading, show loading state
+  if (loading) {
+    return (
+      <div className="bg-base min-h-screen">
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex justify-center items-center h-64">
+            <Loader className="h-8 w-8 text-forest-700 animate-spin" />
+            <span className="ml-2 text-stone-600">Loading tool details...</span>
+          </div>
+        </main>
+      </div>
+    );
+  }
+  
+  // If error, show error state
+  if (error) {
+    return (
+      <div className="bg-base min-h-screen">
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-6">
+            <div className="flex items-start">
+              <AlertCircle className="h-6 w-6 mr-2 flex-shrink-0" />
+              <div>
+                <h3 className="font-medium text-lg mb-2">Error Loading Tool</h3>
+                <p>{error}</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <button 
+                className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
+                onClick={() => navigate('/marketplace')}
+              >
+                Return to Marketplace
+              </button>
+            </div>
+          </div>
+        </main>
+
+      </div>
+    );
+  }
+  
+  // If no tool data, show not found state
+  if (!tool) {
+    return (
+      <div className="bg-base min-h-screen">
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-4 rounded-lg mb-6">
+            <div className="flex items-start">
+              <AlertCircle className="h-6 w-6 mr-2 flex-shrink-0" />
+              <div>
+                <h3 className="font-medium text-lg mb-2">Tool Not Found</h3>
+                <p>The tool you're looking for couldn't be found. It may have been removed or the URL might be incorrect.</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <button 
+                className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
+                onClick={() => navigate('/marketplace')}
+              >
+                Browse Available Tools
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+  
+  // Main content when tool is loaded successfully
   return (
-    <div className="bg-stone-50 min-h-screen">
+    <div className="bg-base min-h-screen">
       <Header />
       
-      {/* Tool detail content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb navigation */}
         <div className="mb-6">
-          <button className="flex items-center text-stone-600 hover:text-orange-700">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to search results
+          <button 
+            className="flex items-center text-stone-600 hover:text-forest-700"
+            onClick={() => navigate('/marketplace')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Marketplace
           </button>
         </div>
         
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left column - Images */}
-          <div className="lg:col-span-2">
-            {/* Image gallery */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-              <div className="relative">
-                {/* Main image */}
-                <img
-                  src={toolData.images[activeImageIndex]}
-                  alt={toolData.name}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Main image with error handling */}
+            <div className="bg-white rounded-lg overflow-hidden shadow-md relative">
+              {tool.images && tool.images.length > 0 ? (
+                <img 
+                  src={tool.images[activeImageIndex] || '/api/placeholder/400/300'} 
+                  alt={tool.name}
                   className="w-full h-96 object-contain"
+                  onError={(e) => {
+                    console.log("Image failed to load:", tool.images[activeImageIndex]);
+                    e.target.onerror = null; // Prevent infinite error loop
+                    e.target.src = '/api/placeholder/400/300'; // Fallback image
+                  }}
                 />
-                
-                {/* Image navigation buttons */}
-                <button 
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-1 rounded-full shadow"
-                  onClick={prevImage}
-                >
-                  <ChevronLeft className="h-6 w-6 text-stone-700" />
-                </button>
-                <button 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-1 rounded-full shadow"
-                  onClick={nextImage}
-                >
-                  <ChevronRight className="h-6 w-6 text-stone-700" />
-                </button>
-                
-                {/* Image count indicator */}
-                <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
-                  {activeImageIndex + 1} / {toolData.images.length}
+              ) : (
+                <div className="w-full h-96 bg-stone-100 flex items-center justify-center">
+                  <span className="text-stone-400">No image available</span>
                 </div>
-                
-                {/* Verification badge */}
-                {toolData.isVerified && (
-                  <div className="absolute top-2 left-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center">
-                    <Check className="h-3 w-3 mr-1" /> Verified
-                  </div>
-                )}
-              </div>
+              )}
               
-              {/* Thumbnail row */}
-              <div className="flex gap-2 p-4 border-t">
-                {toolData.images.map((image, index) => (
-                  <button
-                    key={index}
-                    className={`w-16 h-16 rounded overflow-hidden border-2 ${
-                      activeImageIndex === index ? 'border-orange-500' : 'border-transparent'
-                    }`}
-                    onClick={() => selectImage(index)}
+              {/* Image navigation arrows */}
+              {tool.images && tool.images.length > 1 && (
+                <>
+                  <button 
+                    className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-2 shadow hover:bg-opacity-100"
+                    onClick={prevImage}
                   >
-                    <img
-                      src={image}
-                      alt={`Thumbnail ${index + 1}`}
+                    <ChevronLeft className="h-5 w-5 text-stone-700" />
+                  </button>
+                  <button 
+                    className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-2 shadow hover:bg-opacity-100"
+                    onClick={nextImage}
+                  >
+                    <ChevronRight className="h-5 w-5 text-stone-700" />
+                  </button>
+                </>
+              )}
+              
+              {/* Verification badge */}
+              {tool.is_verified && (
+                <div className="absolute top-4 right-4 bg-forest-700 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                  <Check className="h-3 w-3 mr-1" />
+                  Verified
+                </div>
+              )}
+            </div>
+            
+            {/* Thumbnail images with error handling */}
+            {tool.images && tool.images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {tool.images.map((image, index) => (
+                  <button 
+                    key={index}
+                    className={`w-20 h-20 rounded-md overflow-hidden border-2 ${index === activeImageIndex ? 'border-forest-700' : 'border-transparent'}`}
+                    onClick={() => setActiveImageIndex(index)}
+                  >
+                    <img 
+                      src={image} 
+                      alt={`${tool.name} thumbnail ${index + 1}`} 
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/api/placeholder/80/80';
+                      }}
                     />
                   </button>
                 ))}
               </div>
-            </div>
+            )}
             
             {/* Tool description */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-medium mb-4">Description</h2>
-              <p className="text-stone-700 mb-4">{toolData.description}</p>
-              
-              {/* Specifications table */}
-              <h3 className="text-lg font-medium mt-8 mb-4">Specifications</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                {toolData.specifications.map((spec, index) => (
-                  <div key={index} className="flex justify-between py-2 border-b border-stone-100">
-                    <span className="text-stone-600">{spec.name}</span>
-                    <span className="text-stone-800 font-medium">{spec.value}</span>
+            <div className="bg-white rounded-lg p-6 shadow-md">
+              <h2 className="text-lg font-medium text-stone-800 mb-4">Description</h2>
+              <p className="text-stone-600 whitespace-pre-line">{tool.description}</p>
+            </div>
+            
+            {/* Specifications */}
+            <div className="bg-white rounded-lg p-6 shadow-md">
+              <h2 className="text-lg font-medium text-stone-800 mb-4">Specifications</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {tool.brand && (
+                  <div>
+                    <dt className="text-sm text-stone-500">Brand</dt>
+                    <dd className="text-stone-800">{tool.brand}</dd>
                   </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Condition details */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <div className="flex items-start justify-between mb-4">
-                <h2 className="text-xl font-medium">Condition Details</h2>
-                <span className={`inline-flex items-center text-sm px-2 py-1 rounded-full ${
-                  toolData.condition === "Excellent" ? "bg-green-100 text-green-800" : 
-                  toolData.condition === "Very Good" ? "bg-blue-100 text-blue-800" : 
-                  toolData.condition === "Good" ? "bg-yellow-100 text-yellow-800" : 
-                  "bg-orange-100 text-orange-800"
-                }`}>
-                  {toolData.condition_details.level}
-                </span>
-              </div>
-              
-              <p className="text-stone-700 mb-4">{toolData.condition_details.description}</p>
-              
-              <h3 className="text-sm font-medium text-stone-600 uppercase mb-2">Notable Features</h3>
-              <ul className="space-y-1 mb-4">
-                {toolData.condition_details.notable_features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                    <span className="text-stone-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            {/* Similar items */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-medium mb-4">Similar Tools</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {toolData.similar_tools.map((tool) => (
-                  <a key={tool.id} href="#" className="group">
-                    <div className="bg-stone-50 rounded-lg overflow-hidden border border-stone-200 transition-shadow group-hover:shadow-md">
-                      <img 
-                        src={tool.image} 
-                        alt={tool.name}
-                        className="w-full h-24 object-cover" 
-                      />
-                      <div className="p-3">
-                        <h3 className="text-sm font-medium text-stone-800 truncate group-hover:text-orange-700">{tool.name}</h3>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-orange-700 font-bold">${tool.price}</span>
-                          <span className="text-xs text-stone-600">{tool.condition}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </a>
-                ))}
+                )}
+                {tool.model && (
+                  <div>
+                    <dt className="text-sm text-stone-500">Model</dt>
+                    <dd className="text-stone-800">{tool.model}</dd>
+                  </div>
+                )}
+                {tool.condition && (
+                  <div>
+                    <dt className="text-sm text-stone-500">Condition</dt>
+                    <dd className="text-stone-800">{tool.condition}</dd>
+                  </div>
+                )}
+                {tool.age && (
+                  <div>
+                    <dt className="text-sm text-stone-500">Age</dt>
+                    <dd className="text-stone-800">{tool.age}</dd>
+                  </div>
+                )}
+                {tool.material && (
+                  <div>
+                    <dt className="text-sm text-stone-500">Material</dt>
+                    <dd className="text-stone-800">{tool.material}</dd>
+                  </div>
+                )}
+                {tool.dimensions && (
+                  <div>
+                    <dt className="text-sm text-stone-500">Dimensions</dt>
+                    <dd className="text-stone-800">{tool.dimensions}</dd>
+                  </div>
+                )}
               </div>
             </div>
           </div>
           
-          {/* Right column - Price, seller info, actions */}
-          <div className="lg:col-span-1">
-            {/* Price and action buttons */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <div className="flex items-baseline mb-2">
-                <span className="text-3xl font-bold text-orange-700">${toolData.currentPrice}</span>
-                {toolData.originalPrice > toolData.currentPrice && (
-                  <>
-                    <span className="ml-2 text-lg text-stone-500 line-through">${toolData.originalPrice}</span>
-                    <span className="ml-2 text-sm text-green-600">
-                      Save ${toolData.originalPrice - toolData.currentPrice}
+          {/* Right column - Pricing, seller info, actions */}
+          <div className="space-y-4">
+            {/* Main info card */}
+            <div className="bg-white rounded-lg p-6 shadow-md">
+              <h1 className="text-2xl font-medium text-stone-800 mb-2">{tool.name}</h1>
+              
+              {/* Pricing */}
+              <div className="mb-4">
+                <div className="flex items-baseline">
+                  <span className="text-2xl font-medium text-stone-800">
+                    {formatPrice(tool.current_price)}
+                  </span>
+                  {tool.original_price && tool.original_price > tool.current_price && (
+                    <span className="ml-2 text-sm text-stone-500 line-through">
+                      {formatPrice(tool.original_price)}
                     </span>
-                  </>
+                  )}
+                </div>
+                
+                {tool.original_price && tool.original_price > tool.current_price && (
+                  <span className="text-sm text-green-600">
+                    You save {formatPrice(tool.original_price - tool.current_price)} ({Math.round((1 - tool.current_price / tool.original_price) * 100)}%)
+                  </span>
                 )}
               </div>
               
-              <div className="flex items-center text-stone-600 mb-6">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span className="text-sm">{toolData.location} • {toolData.distance}</span>
+              {/* Location */}
+              <div className="flex items-center mb-4">
+                <MapPin className="h-4 w-4 text-stone-400 mr-2" />
+                <span className="text-stone-600">{tool.location}</span>
               </div>
               
-              <button className="w-full py-3 bg-orange-700 hover:bg-orange-800 text-white rounded-md font-medium mb-3">
-                Contact Seller
-              </button>
+              {/* Category */}
+              <div className="mb-6">
+                <span className="inline-block bg-stone-100 text-stone-800 text-xs px-2 py-1 rounded mr-2">
+                  {tool.category}
+                </span>
+                {tool.subcategory && (
+                  <span className="inline-block bg-stone-100 text-stone-800 text-xs px-2 py-1 rounded">
+                    {tool.subcategory}
+                  </span>
+                )}
+              </div>
               
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <button className="flex justify-center items-center py-2 border border-stone-300 rounded-md text-stone-700 hover:bg-stone-50">
-                  <Heart className="h-5 w-5 mr-2" />
-                  Save
+              {/* Action buttons */}
+              <div className="grid grid-cols-1 gap-3 mb-6">
+                <button 
+                  className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center justify-center font-medium"
+                  onClick={contactSeller}
+                >
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  Contact Seller
                 </button>
-                <button className="flex justify-center items-center py-2 border border-stone-300 rounded-md text-stone-700 hover:bg-stone-50">
+                
+                <button 
+                  className={`w-full py-3 rounded-md flex items-center justify-center font-medium ${inWishlist ? 'bg-forest-100 text-forest-700 border border-forest-300' : 'bg-white border border-stone-300 text-stone-700 hover:bg-stone-50'}`}
+                  onClick={toggleWishlist}
+                >
+                  <Heart className={`h-5 w-5 mr-2 ${inWishlist ? 'fill-forest-700' : ''}`} />
+                  {inWishlist ? 'Saved to Wishlist' : 'Save to Wishlist'}
+                </button>
+                
+                <button 
+                  className="w-full py-3 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 flex items-center justify-center font-medium"
+                >
                   <Share className="h-5 w-5 mr-2" />
                   Share
                 </button>
               </div>
-              
-              <div className="flex justify-between text-xs text-stone-500 mt-4">
-                <div className="flex items-center">
-                  <Calendar className="h-3.5 w-3.5 mr-1" />
-                  Posted {toolData.datePosted}
-                </div>
-                <button className="flex items-center text-stone-500 hover:text-stone-700">
-                  <Flag className="h-3.5 w-3.5 mr-1" />
-                  Report
-                </button>
-              </div>
             </div>
             
-            {/* Seller information */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <h2 className="text-xl font-medium mb-4">About the Seller</h2>
-              
-              <div className="flex items-center mb-4">
-                <img 
-                  src={toolData.seller.image} 
-                  alt={toolData.seller.name}
-                  className="w-12 h-12 rounded-full mr-3" 
-                />
-                <div>
-                  <h3 className="font-medium text-stone-800">
-                    {toolData.seller.name}
-                    {toolData.seller.verified && (
-                      <span className="inline-flex items-center ml-1 text-xs text-green-600">
-                        <Check className="h-3 w-3 mr-0.5" />
-                        Verified
-                      </span>
+            {/* Seller info card with avatar error handling */}
+            {tool.seller && (
+              <div className="bg-white rounded-lg p-6 shadow-md">
+                <h2 className="text-lg font-medium text-stone-800 mb-4">About the Seller</h2>
+                
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-stone-200 rounded-full overflow-hidden mr-3">
+                    {tool.seller.avatar_url ? (
+                      <img 
+                        src={tool.seller.avatar_url} 
+                        alt={`${tool.seller.username || 'Seller'}'s avatar`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log("Avatar failed to load:", tool.seller.avatar_url);
+                          e.target.onerror = null;
+                          // Use first letter of username as fallback
+                          e.target.style.display = 'none';
+                          e.target.parentNode.innerHTML = `<div class="w-full h-full flex items-center justify-center text-stone-500 font-medium">${(tool.seller.username || tool.seller.full_name || 'S').charAt(0).toUpperCase()}</div>`;
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-500 font-medium">
+                        {(tool.seller.username || tool.seller.full_name || 'S').charAt(0).toUpperCase()}
+                      </div>
                     )}
-                  </h3>
-                  <div className="flex items-center">
-                    <div className="flex items-center text-yellow-500 mr-1">
-                      <Star className="h-4 w-4 fill-current" />
-                    </div>
-                    <span className="text-sm text-stone-700">{toolData.seller.rating}</span>
-                    <span className="mx-1 text-stone-400">•</span>
-                    <span className="text-sm text-stone-600">{toolData.seller.reviewCount} reviews</span>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-medium text-stone-800">
+                      {tool.seller.username || tool.seller.full_name || 'Anonymous Seller'}
+                    </h3>
+                    
+                    {tool.seller.rating && (
+                      <div className="flex items-center">
+                        <Star className="h-3 w-3 text-yellow-500 mr-1" fill="#EAB308" />
+                        <span className="text-sm text-stone-600">
+                          {tool.seller.rating.toFixed(1)} ({tool.seller.rating_count || 0} reviews)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
+                
+                {tool.seller.location && (
+                  <div className="flex items-center text-sm text-stone-600 mb-4">
+                    <MapPin className="h-4 w-4 text-stone-400 mr-2" />
+                    <span>{tool.seller.location}</span>
+                  </div>
+                )}
+                
+                <button 
+                  className="w-full py-2 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 text-sm"
+                  onClick={() => navigate(`/profile/${tool.seller.id}`)}
+                >
+                  View Profile
+                </button>
               </div>
-              
-              <div className="space-y-3 text-sm">
-                <div className="flex">
-                  <Calendar className="h-4 w-4 text-stone-500 mr-2 flex-shrink-0" />
-                  <span className="text-stone-700">Member since {toolData.seller.memberSince}</span>
-                </div>
-                <div className="flex">
-                  <MessageSquare className="h-4 w-4 text-stone-500 mr-2 flex-shrink-0" />
-                  <span className="text-stone-700">{toolData.seller.responseRate} response rate</span>
-                </div>
-                <div className="flex">
-                  <Clock className="h-4 w-4 text-stone-500 mr-2 flex-shrink-0" />
-                  <span className="text-stone-700">{toolData.seller.responseTime}</span>
-                </div>
-                <div className="flex">
-                  <MapPin className="h-4 w-4 text-stone-500 mr-2 flex-shrink-0" />
-                  <span className="text-stone-700">{toolData.seller.location}</span>
-                </div>
-              </div>
-              
-              <button className="w-full mt-6 py-2 border border-orange-700 text-orange-700 rounded hover:bg-orange-50 transition-colors">
-                See Seller Profile
-              </button>
-            </div>
-            
-            {/* Benchlot guarantee */}
-            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-              <div className="flex items-start">
-                <Shield className="h-5 w-5 text-orange-700 mr-3 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-stone-800 mb-1">Benchlot Protection</h3>
-                  <p className="text-sm text-stone-700 mb-2">
-                    All verified tools on Benchlot are backed by our authenticity guarantee and buyer protection program.
-                  </p>
-                  <a href="#" className="text-sm text-orange-700 hover:text-orange-800 font-medium">
-                    Learn more
-                  </a>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
+        
+        {/* Similar tools section with error handling */}
+        {similarTools.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-medium text-stone-800 mb-6">Similar Tools</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {similarTools.map(similarTool => (
+                <div key={similarTool.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <a href={`/tool/${similarTool.id}`} className="block">
+                    <div className="relative h-48">
+                      <img 
+                        src={similarTool.images?.[0] || '/api/placeholder/300/200'} 
+                        alt={similarTool.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/api/placeholder/300/200';
+                        }}
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-medium text-stone-800 mb-1">{similarTool.name}</h3>
+                      <p className="text-stone-600 text-sm">{similarTool.condition}</p>
+                      <div className="mt-2 text-stone-800 font-medium">
+                        {formatPrice(similarTool.current_price)}
+                      </div>
+                    </div>
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

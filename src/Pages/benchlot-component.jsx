@@ -66,17 +66,15 @@ const LandingPage = () => {
       <section className="section">
         <div className="container">
           <h1 className="hero-title text-center">
-          The marketplace for woodworkers
+          Buy and sell new and used woodworking tools
           </h1>
           <p className="hero-text text-center">
-          Buy and sell new, used, and vintage tools
+         The marketplace for woodworkers to buy and sell new, used, and vintage woodworking tools.
           </p>
-
           <div className="email-form">
             <div className="form-header">
-              <h3 className="feature-title">Join the waitlist</h3>
+              <h3 className="feature-title">Join Benchlot Today</h3>
             </div>
-            
             <form onSubmit={handleSubmit}>
               
               <div className="input-group">
@@ -94,7 +92,7 @@ const LandingPage = () => {
                   className="submit-button"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Joining...' : 'Join Now'}
+                  {isSubmitting ? 'Creating Account...' : 'Sign Up'}
                 </button>
               </div>
 
@@ -118,9 +116,9 @@ const LandingPage = () => {
             <div className="feature">
             <BadgeCheck className="feature-icon" />
               <div>
-                <h3 className="feature-title">Authentication</h3>
+                <h3 className="feature-title">Verified Authenticity</h3>
                 <p className="feature-text">
-                  We verify condition, authenticity, and market value to ensure transparency.
+                We verify the condition, authenticity, and market value of all woodworking tools to ensure transparency and trust in every transaction.
                 </p>
               </div>
             </div>
@@ -128,9 +126,9 @@ const LandingPage = () => {
             <div className="feature">
               <ChartSpline className="feature-icon" />
               <div>
-                <h3 className="feature-title">Price Transparency</h3>
+                <h3 className="feature-title">Transparent Pricing</h3>
                 <p className="feature-text">
-                  Price reporting and trends from real transactions, giving you confidence in every transaction.
+                Access real pricing data and market trends from actual transactions. Buy and sell with confidence knowing you're getting fair market value for your woodworking tools.
                 </p>
               </div>
             </div>
@@ -138,9 +136,9 @@ const LandingPage = () => {
             <div className="feature">
               <LayoutList className="feature-icon" />
               <div>
-                <h3 className="feature-title">Free to list</h3>
+                <h3 className="feature-title">List Your Tools for Free</h3>
                 <p className="feature-text">
-                Tell us what you’re selling and we’ll help you list it, price it, and get it in front of a community of makers.
+                Sell your woodworking tools effortlessly. We assist you in listing, pricing, and showcasing your items to a dedicated community of woodworkers and craftsmen.
                 </p>
               </div>
             </div>
@@ -148,9 +146,9 @@ const LandingPage = () => {
             <div className="feature">
               <Users className="feature-icon" />
               <div>
-                <h3 className="feature-title">Knowledgeable Community</h3>
+                <h3 className="feature-title">Join Our Woodworking Community</h3>
                 <p className="feature-text">
-                  Bringing together a dedicated community of craftspeople who understand the value of a quality tool.
+                Connect with passionate woodworkers and craftsmen who value quality tools. Share knowledge, get advice, and be part of a growing community.
                 </p>
               </div>
             </div>
@@ -183,7 +181,7 @@ const LandingPage = () => {
         <div className="container">
           <div className="email-form">
             <div className="form-header">
-              <h3 className="feature-title">Join the waitlist</h3>
+              <h3 className="feature-title">Start Buying and Selling Today</h3>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="input-group">
@@ -202,7 +200,7 @@ const LandingPage = () => {
                   className="submit-button"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Joining...' : 'Join Now'}
+                  {isSubmitting ? 'Joining...' : 'Join Benchlot'}
                 </button>
                 </div>
               </div>
@@ -213,7 +211,7 @@ const LandingPage = () => {
                 </div>
               )}
             </form>
-            <p className="form-text">Benchlot is the online marketplace dedicated to buying and selling new, used, and vintage tools.</p>
+            <p className="form-text">Benchlot is the leading online marketplace dedicated to buying and selling new, used, and vintage woodworking tools. Join us and discover the difference quality tools can make.</p>
             </div>
             </div>
             </section>

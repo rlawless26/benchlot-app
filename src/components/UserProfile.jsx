@@ -259,11 +259,11 @@ const UserProfile = () => {
 
   if (loading) {
     return (
-      <div className="bg-stone-50 min-h-screen">
+      <div className="bg-base min-h-screen">
         <Header />
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
-            <Loader className="h-8 w-8 text-orange-700 animate-spin" />
+            <Loader className="h-8 w-8 text-forest-700 animate-spin" />
             <span className="ml-2 text-stone-600">Loading...</span>
           </div>
         </main>
@@ -271,7 +271,7 @@ const UserProfile = () => {
     );
   }
   return (
-    <div className="bg-stone-50 min-h-screen">
+    <div className="bg-base min-h-screen">
       <Header />
       <main className="max-w-4xl mx-auto px-4 py-8">
         {error && (
@@ -308,7 +308,7 @@ const UserProfile = () => {
                         name="username"
                         value={editFormData.username}
                         onChange={handleEditChange}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                       />
                     </div>
                     
@@ -322,7 +322,7 @@ const UserProfile = () => {
                         name="full_name"
                         value={editFormData.full_name}
                         onChange={handleEditChange}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                       />
                     </div>
                     
@@ -336,7 +336,7 @@ const UserProfile = () => {
                         name="location"
                         value={editFormData.location}
                         onChange={handleEditChange}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                       />
                     </div>
                     
@@ -349,7 +349,7 @@ const UserProfile = () => {
                         id="avatar"
                         name="avatar"
                         onChange={handleFileChange}
-                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                         accept="image/*"
                       />
                       {editFormData.avatarPreview && (
@@ -374,7 +374,7 @@ const UserProfile = () => {
                       value={editFormData.bio}
                       onChange={handleEditChange}
                       rows={4}
-                      className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-orange-700"
+                      className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
                     ></textarea>
                   </div>
                   
@@ -401,7 +401,7 @@ const UserProfile = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-4 py-2 bg-orange-700 text-white rounded-md hover:bg-orange-800 flex items-center"
+                      className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center"
                     >
                       {isSubmitting ? (
                         <>
@@ -422,8 +422,8 @@ const UserProfile = () => {
                       className="w-24 h-24 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-full bg-orange-100 flex items-center justify-center">
-                      <User className="h-12 w-12 text-orange-700" />
+                    <div className="w-24 h-24 rounded-full bg-forest-100 flex items-center justify-center">
+                      <User className="h-12 w-12 text-forest-700" />
                     </div>
                   )}
 
@@ -463,7 +463,7 @@ const UserProfile = () => {
                 <div className="flex justify-end mt-6">
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-orange-700 text-white rounded-md hover:bg-orange-800"
+                    className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
                   >
                     Edit Profile
                   </button>
@@ -474,7 +474,7 @@ const UserProfile = () => {
                 <p className="text-stone-500">Profile data could not be loaded.</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="mt-4 px-4 py-2 bg-orange-700 text-white rounded-md hover:bg-orange-800"
+                  className="mt-4 px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
                 >
                   Retry
                 </button>
