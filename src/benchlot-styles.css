@@ -14,7 +14,7 @@
   --color-accent-hover: #145535; 
   --color-accent-light: #78ab96; 
   --color-accent-dark: #d4d4d4;
-  --color-accent-bg: #e6f0ebED;  
+  --color-accent-bg: #e3dacc;  
   --color-icon: #17613F;   
   --color-footer-bg: #141413;
   --color-ivory-light: #faf9f5;
@@ -298,6 +298,13 @@ h1, h2, h3 {
   justify-content: center;
   align-items: center;
   padding-top:10px;
+}
+
+.how-it-works-section {
+  background-color: var(--color-accent-bg);
+  margin-left:8rem;
+  margin-right:8rem;
+  border-radius: 3rem;
 }
 
 /* Cards */

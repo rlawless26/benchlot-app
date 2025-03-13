@@ -101,24 +101,28 @@ const Header = () => {
               <Menu className="h-6 w-6" />
             </button>
 
-            <Link to="/" className="text-2xl font-serif text-stone-800">BENCHLOT</Link>
+            {/* Updated logo link to "/2" */}
+            <Link to="/2" className="text-2xl font-serif text-forest-800">Benchlot</Link>
 
-            {/* Desktop Categories */}
+            {/* Desktop Categories with links to marketplace with filters */}
             <nav className="hidden lg:flex items-center gap-6">
               {categories.map((category) => (
                 <div key={category.name} className="relative group">
-                  <button className="flex items-center gap-1 text-stone-700 hover:text-forest-700">
+                  <Link 
+                    to={`/marketplace?category=${encodeURIComponent(category.name)}`}
+                    className="flex items-center gap-1 text-stone-700 hover:text-forest-700"
+                  >
                     {category.name} <ChevronDown className="h-4 w-4" />
-                  </button>
+                  </Link>
                   <div className="absolute left-0 top-full mt-1 bg-white shadow-lg rounded-md p-2 min-w-[200px] hidden group-hover:block z-10">
                     {category.subcategories.map((sub) => (
-                      <a
+                      <Link
                         key={sub}
-                        href="#"
+                        to={`/marketplace?category=${encodeURIComponent(category.name)}&subcategory=${encodeURIComponent(sub)}`}
                         className="block px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 rounded-md"
                       >
                         {sub}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -210,7 +214,10 @@ const Header = () => {
                       </div>
                     )}
                   </div>
-                  <a href="/listtool" class="px-4 py-2 bg-white border border-forest-300 text-forest-700 rounded-md hover:bg-forest-50 inline-flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wrench h-5 w-5 mr-2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>List a Tool</a>
+                  <a href="/listtool" className="px-4 py-2 bg-white border border-forest-300 text-forest-700 rounded-md hover:bg-forest-50 inline-flex items-center justify-center">
+                    <Hammer className="h-5 w-5 mr-2" />
+                    List a Tool
+                  </a>
                 </>
               ) : (
                 // Unauthenticated user options
@@ -262,17 +269,24 @@ const Header = () => {
               </button>
             </div>
 
-            {/* Mobile Categories */}
+            {/* Mobile Categories with updated links */}
             <div className="space-y-4">
               {categories.map((category) => (
                 <div key={category.name} className="space-y-2">
-                  <div className="font-medium text-stone-800">{category.name}</div>
+                  <Link 
+                    to={`/marketplace?category=${encodeURIComponent(category.name)}`}
+                    className="font-medium text-stone-800 block hover:text-forest-700"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {category.name}
+                  </Link>
                   <div className="pl-4 space-y-2">
                     {category.subcategories.map((sub) => (
                       <Link
                         key={sub}
-                        to="#"
+                        to={`/marketplace?category=${encodeURIComponent(category.name)}&subcategory=${encodeURIComponent(sub)}`}
                         className="block text-stone-700 hover:text-forest-700"
+                        onClick={() => setIsMenuOpen(false)}
                       >
                         {sub}
                       </Link>

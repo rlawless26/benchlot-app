@@ -122,7 +122,7 @@ const LandingPage = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {featuredTools.map((tool) => (
-          <div key={tool.id} className="bg-base rounded-lg overflow-hidden shadow-md transition-transform hover:shadow-lg hover:-translate-y-1">
+          <div key={tool.id} className="bg-white rounded-lg overflow-hidden shadow-md transition-transform hover:shadow-lg hover:-translate-y-1">
             <img 
               src={getDisplayImage(tool)} 
               alt={tool.name} 
@@ -223,6 +223,7 @@ const LandingPage = () => {
 
       {/* How It Works */}
       <section className="py-20 bg-white">
+      <section className="section how-it-works-section">
         <div className="max-w-7xl mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
             <h2 className="text-3xl font-serif font-medium mb-4 text-stone-800">How Benchlot Works</h2>
@@ -231,7 +232,7 @@ const LandingPage = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="text-center">
-              <div className="bg-forest-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="bg-white shadow-md w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
                 <BadgeCheck className="h-8 w-8 text-forest-700" />
               </div>
               <h3 className="text-xl font-medium mb-2">Verified Tools</h3>
@@ -239,7 +240,7 @@ const LandingPage = () => {
             </div>
             
             <div className="text-center">
-              <div className="bg-forest-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="bg-white shadow-md w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Users className="h-8 w-8 text-forest-700" />
               </div>
               <h3 className="text-xl font-medium mb-2">Local Community</h3>
@@ -247,7 +248,7 @@ const LandingPage = () => {
             </div>
             
             <div className="text-center">
-              <div className="bg-forest-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="bg-white shadow-md w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
                 <ChartSpline className="h-8 w-8 text-forest-700" />
               </div>
               <h3 className="text-xl font-medium mb-2">Fair Pricing</h3>
@@ -255,6 +256,7 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
+        </section>
       </section>
 
       {/* Featured Listings Section */}
@@ -275,7 +277,9 @@ const LandingPage = () => {
         </div>
       </section>
       
-      {/* Trust Section */}
+      {/* 
+      
+      Trust Section 
       <section className="py-20 bg-base">
         <div className="max-w-7xl mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12">
@@ -291,10 +295,12 @@ const LandingPage = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section>  
+      
+      */}
       
       {/* CTA Section */}
-      <section className="py-20 bg-forest-50">
+      <section className="py-20 bg-base">
         <div className="max-w-7xl mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-serif font-medium mb-4 text-stone-800">Ready to join the community?</h2>

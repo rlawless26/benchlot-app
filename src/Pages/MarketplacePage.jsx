@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Sliders, 
   Check, 
@@ -20,9 +21,13 @@ import ToolListingCard from '../components/ToolListingCard';
 import { fetchTools } from '../supabaseClient';
 
 const MarketplacePage = () => {
+  // Use search params for URL filtering
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   // State for mobile filter panel
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [selectedCondition, setSelectedCondition] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 2000]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,14 +40,17 @@ const MarketplacePage = () => {
   // Add state for actual tool listings
   const [toolListings, setToolListings] = useState([]);
   
-  // Filter categories
-  const categories = [
-    'All Categories',
-    'Power Tools',
-    'Hand Tools',
-    'Workshop Equipment',
-    'Machinery'
-  ];
+  // Filter categories with subcategories
+  const categoryData = {
+    'All Categories': [],
+    'Power Tools': ['Table Saws', 'Drills', 'Sanders', 'Routers', 'Air Compressors'],
+    'Hand Tools': ['Planes', 'Chisels', 'Hammers', 'Screwdrivers', 'Wrenches'],
+    'Workshop Equipment': ['Dust Collection', 'Work Benches', 'Tool Storage', 'Safety Equipment'],
+    'Machinery': ['Lathes', 'Mills', 'Band Saws', 'Drill Presses', 'CNC']
+  };
+  
+  // Categories array for simple iteration
+  const categories = Object.keys(categoryData);
   
   // Condition options
   const conditions = [
@@ -54,6 +62,89 @@ const MarketplacePage = () => {
     'Fair'
   ];
   
+  // Load filters from URL parameters when component mounts
+  useEffect(() => {
+    // Get category from URL
+    const categoryParam = searchParams.get('category');
+    if (categoryParam && categories.includes(categoryParam)) {
+      setSelectedCategory(categoryParam);
+    }
+    
+    // Get subcategory from URL
+    const subcategoryParam = searchParams.get('subcategory');
+    if (subcategoryParam) {
+      setSelectedSubcategory(subcategoryParam);
+    }
+    
+    // Get condition filters from URL (comma-separated list)
+    const conditionParam = searchParams.get('condition');
+    if (conditionParam) {
+      const conditionArray = conditionParam.split(',');
+      // Only use valid conditions that are in our predefined list
+      const validConditions = conditionArray.filter(c => conditions.includes(c));
+      setSelectedCondition(validConditions);
+    }
+    
+    // Get price range from URL
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    if (minPrice !== null || maxPrice !== null) {
+      setPriceRange([
+        minPrice !== null ? parseInt(minPrice) : 0,
+        maxPrice !== null ? parseInt(maxPrice) : 2000
+      ]);
+    }
+    
+    // Get search query from URL
+    const queryParam = searchParams.get('query');
+    if (queryParam) {
+      setSearchQuery(queryParam);
+    }
+    
+    // Get sort parameter from URL
+    const sortParam = searchParams.get('sort');
+    if (sortParam && ['featured', 'newest', 'price_low', 'price_high'].includes(sortParam)) {
+      setSortBy(sortParam);
+    }
+  }, [searchParams]);
+  
+  // Update URL when filters change
+  const updateUrlParams = () => {
+    const newParams = new URLSearchParams();
+    
+    // Only add params that aren't default values
+    if (selectedCategory !== 'All Categories') {
+      newParams.set('category', selectedCategory);
+    }
+    
+    if (selectedSubcategory) {
+      newParams.set('subcategory', selectedSubcategory);
+    }
+    
+    if (selectedCondition.length > 0) {
+      newParams.set('condition', selectedCondition.join(','));
+    }
+    
+    if (priceRange[0] > 0) {
+      newParams.set('minPrice', priceRange[0].toString());
+    }
+    
+    if (priceRange[1] < 2000) {
+      newParams.set('maxPrice', priceRange[1].toString());
+    }
+    
+    if (searchQuery) {
+      newParams.set('query', searchQuery);
+    }
+    
+    if (sortBy !== 'featured') {
+      newParams.set('sort', sortBy);
+    }
+    
+    // Update the URL without refreshing the page
+    setSearchParams(newParams);
+  };
+  
   // Fetch tools from Supabase when filters change
   useEffect(() => {
     const loadTools = async () => {
@@ -64,6 +155,7 @@ const MarketplacePage = () => {
         // Prepare filter object for the API call
         const filters = {
           category: selectedCategory !== 'All Categories' ? selectedCategory : undefined,
+          subcategory: selectedSubcategory || undefined,
           condition: selectedCondition.length > 0 ? selectedCondition : undefined,
           minPrice: priceRange[0],
           maxPrice: priceRange[1],
@@ -85,7 +177,10 @@ const MarketplacePage = () => {
     };
     
     loadTools();
-  }, [selectedCategory, selectedCondition, priceRange, searchQuery, sortBy]);
+    
+    // Update URL whenever filters change
+    updateUrlParams();
+  }, [selectedCategory, selectedSubcategory, selectedCondition, priceRange, searchQuery, sortBy]);
   
   // Toggle condition filter
   const toggleCondition = (condition) => {
@@ -96,6 +191,18 @@ const MarketplacePage = () => {
     }
   };
   
+  // Handle category change
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    // Reset subcategory when category changes
+    setSelectedSubcategory(null);
+  };
+  
+  // Handle subcategory change
+  const handleSubcategoryChange = (subcategory) => {
+    setSelectedSubcategory(subcategory);
+  };
+  
   // Handle sort change
   const handleSortChange = (sortValue) => {
     setSortBy(sortValue);
@@ -104,12 +211,15 @@ const MarketplacePage = () => {
   // Reset filters
   const resetFilters = () => {
     setSelectedCategory('All Categories');
+    setSelectedSubcategory(null);
     setSelectedCondition([]);
     setPriceRange([0, 2000]);
     setSearchQuery('');
+    setSortBy('featured');
+    
+    // Clear URL parameters
+    setSearchParams({});
   };
-  
-  // Filter tools function is no longer needed as we're filtering on the server side
   
   return (
     <div className="bg-base min-h-screen">
@@ -141,7 +251,7 @@ const MarketplacePage = () => {
                         id={`category-${category}`}
                         name="category"
                         checked={selectedCategory === category}
-                        onChange={() => setSelectedCategory(category)}
+                        onChange={() => handleCategoryChange(category)}
                         className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                       />
                       <label htmlFor={`category-${category}`} className="text-sm text-stone-700">
@@ -151,6 +261,43 @@ const MarketplacePage = () => {
                   ))}
                 </div>
               </div>
+              
+              {/* Subcategories - Only show when a category is selected */}
+              {selectedCategory !== 'All Categories' && categoryData[selectedCategory].length > 0 && (
+                <div className="mb-6">
+                  <h3 className="font-medium text-stone-700 mb-3">Subcategory</h3>
+                  <div className="space-y-2">
+                    {categoryData[selectedCategory].map((subcategory) => (
+                      <div key={subcategory} className="flex items-center">
+                        <input
+                          type="radio"
+                          id={`subcategory-${subcategory}`}
+                          name="subcategory"
+                          checked={selectedSubcategory === subcategory}
+                          onChange={() => handleSubcategoryChange(subcategory)}
+                          className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
+                        />
+                        <label htmlFor={`subcategory-${subcategory}`} className="text-sm text-stone-700">
+                          {subcategory}
+                        </label>
+                      </div>
+                    ))}
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="subcategory-all"
+                        name="subcategory"
+                        checked={selectedSubcategory === null}
+                        onChange={() => handleSubcategoryChange(null)}
+                        className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
+                      />
+                      <label htmlFor="subcategory-all" className="text-sm text-stone-700">
+                        All {selectedCategory}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Conditions */}
               <div className="mb-6">
@@ -318,35 +465,94 @@ const MarketplacePage = () => {
               </div>
             </div>
             
-            {/* Results summary */}
-            <div className="flex items-center justify-between mb-4">
+            {/* Display active filters */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {/* Category filter badge */}
+              {selectedCategory !== 'All Categories' && (
+                <span className="inline-flex items-center bg-forest-100 text-forest-800 text-xs px-2 py-1 rounded-full">
+                  {selectedCategory}
+                  <button 
+                    className="ml-1 text-forest-800" 
+                    onClick={() => handleCategoryChange('All Categories')}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              
+              {/* Subcategory filter badge */}
+              {selectedSubcategory && (
+                <span className="inline-flex items-center bg-forest-100 text-forest-800 text-xs px-2 py-1 rounded-full">
+                  {selectedSubcategory}
+                  <button 
+                    className="ml-1 text-forest-800" 
+                    onClick={() => setSelectedSubcategory(null)}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              
+              {/* Condition filter badges */}
+              {selectedCondition.map((condition) => (
+                <span key={condition} className="inline-flex items-center bg-forest-100 text-forest-800 text-xs px-2 py-1 rounded-full">
+                  {condition}
+                  <button 
+                    className="ml-1 text-forest-800" 
+                    onClick={() => toggleCondition(condition)}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              
+              {/* Price filter badge */}
+              {(priceRange[0] > 0 || priceRange[1] < 2000) && (
+                <span className="inline-flex items-center bg-forest-100 text-forest-800 text-xs px-2 py-1 rounded-full">
+                  ${priceRange[0]} - ${priceRange[1]}
+                  <button 
+                    className="ml-1 text-forest-800" 
+                    onClick={() => setPriceRange([0, 2000])}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              
+              {/* Search query badge */}
+              {searchQuery && (
+                <span className="inline-flex items-center bg-forest-100 text-forest-800 text-xs px-2 py-1 rounded-full">
+                  Search: {searchQuery}
+                  <button 
+                    className="ml-1 text-forest-800" 
+                    onClick={() => setSearchQuery('')}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+              
+              {/* Clear all filters button */}
+              {(selectedCategory !== 'All Categories' || 
+                selectedSubcategory || 
+                selectedCondition.length > 0 || 
+                priceRange[0] > 0 || 
+                priceRange[1] < 2000 || 
+                searchQuery) && (
+                <button 
+                  className="text-xs text-forest-700 hover:text-forest-800 ml-2"
+                  onClick={resetFilters}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            
+            {/* Results count */}
+            <div className="mb-4">
               <p className="text-stone-600">
                 {loading ? 'Loading tools...' : `Showing ${toolListings.length} results`}
               </p>
-              
-              {/* Active filters */}
-              {selectedCondition.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {selectedCondition.map((condition) => (
-                    <span key={condition} className="inline-flex items-center bg-forest-100 text-forest-800 text-xs px-2 py-1 rounded-full">
-                      {condition}
-                      <button 
-                        className="ml-1 text-forest-800" 
-                        onClick={() => toggleCondition(condition)}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                  
-                  <button 
-                    className="text-xs text-forest-700 hover:text-forest-800"
-                    onClick={() => setSelectedCondition([])}
-                  >
-                    Clear all
-                  </button>
-                </div>
-              )}
             </div>
             
             {/* Loading state */}
@@ -425,7 +631,7 @@ const MarketplacePage = () => {
                             id={`mobile-category-${category}`}
                             name="mobile-category"
                             checked={selectedCategory === category}
-                            onChange={() => setSelectedCategory(category)}
+                            onChange={() => handleCategoryChange(category)}
                             className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
                           />
                           <label htmlFor={`mobile-category-${category}`} className="text-sm text-stone-700">
@@ -435,6 +641,43 @@ const MarketplacePage = () => {
                       ))}
                     </div>
                   </div>
+                  
+                  {/* Subcategories - Only show when a category is selected */}
+                  {selectedCategory !== 'All Categories' && categoryData[selectedCategory].length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-medium text-stone-700 mb-3">Subcategory</h3>
+                      <div className="space-y-2">
+                        {categoryData[selectedCategory].map((subcategory) => (
+                          <div key={subcategory} className="flex items-center">
+                            <input
+                              type="radio"
+                              id={`mobile-subcategory-${subcategory}`}
+                              name="mobile-subcategory"
+                              checked={selectedSubcategory === subcategory}
+                              onChange={() => handleSubcategoryChange(subcategory)}
+                              className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
+                            />
+                            <label htmlFor={`mobile-subcategory-${subcategory}`} className="text-sm text-stone-700">
+                              {subcategory}
+                            </label>
+                          </div>
+                        ))}
+                        <div className="flex items-center">
+                          <input
+                            type="radio"
+                            id="mobile-subcategory-all"
+                            name="mobile-subcategory"
+                            checked={selectedSubcategory === null}
+                            onChange={() => handleSubcategoryChange(null)}
+                            className="mr-2 h-4 w-4 text-forest-700 focus:ring-forest-500"
+                          />
+                          <label htmlFor="mobile-subcategory-all" className="text-sm text-stone-700">
+                            All {selectedCategory}
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Conditions */}
                   <div className="mb-6">
