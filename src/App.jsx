@@ -15,6 +15,7 @@ import AuthPage from './Pages/AuthPage';
 import AboutPage from './Pages/AboutPage';
 import MyListings from './components/MyListings';
 import AdminFeaturedTools from './components/AdminFeaturedTools';
+import HelpPage from './Pages/HelpPage.jsx';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -139,6 +140,7 @@ function App() {
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/signup" element={<AuthPage mode="signup" />} />
       <Route path="/about" element={<AboutPage />} />
+      <Route path="/help" element={<HelpPage />} />
       <Route 
         path="/my-listings" 
         element={<ProtectedRoute element={<MyListings />} />} 

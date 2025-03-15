@@ -1,0 +1,114 @@
+import React from 'react';
+import { Phone, Mail, HelpCircle } from 'lucide-react';
+import Header from '../header';
+
+const HelpPage = () => {
+  return (
+    <div className="bg-base min-h-screen">
+      <Header />
+      
+      <main className="max-w-7xl mx-auto px-4 py-12">
+        {/* Main heading */}
+        <div className="max-w-3xl mx-auto text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-serif font-medium mb-6 text-stone-800">
+            Contact Benchlot Support
+          </h1>
+          <p className="text-xl text-stone-600 mb-8">
+            Even master craftspeople sometimes forget to measure twice before making a cut. 
+            If you've hit a snag or need help with anything, we're here to smooth things over—no sandpaper required!
+          </p>
+        </div>
+        
+        {/* Contact card */}
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-8 mb-12">
+            <h2 className="text-2xl font-serif font-medium text-stone-800 mb-6 text-center">Ways to Connect</h2>
+            
+            <div className="space-y-6">
+              <div className="flex items-center p-4 border border-stone-200 rounded-lg bg-forest-50">
+                <div className="bg-white shadow-md w-12 h-12 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                  <Phone className="h-6 w-6 text-forest-700" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-stone-800">Call Us</h3>
+                  <p className="text-forest-700 font-medium">781-960-3398</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center p-4 border border-stone-200 rounded-lg bg-forest-50">
+                <div className="bg-white shadow-md w-12 h-12 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                  <Mail className="h-6 w-6 text-forest-700" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-stone-800">Email Us</h3>
+                  <p className="text-forest-700 font-medium">hello@benchlot.com</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* FAQ Section */}
+        <div className="bg-stone-50 rounded-lg py-12 px-6 max-w-4xl mx-auto">
+          <h2 className="text-3xl font-serif font-medium text-stone-800 mb-8 text-center">Frequently Asked Questions</h2>
+          
+          <div className="space-y-8">
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-3 text-stone-800">How do I list a tool?</h3>
+              <p className="text-stone-600">
+                Click on the "List a Tool" button in the top navigation. You'll be guided through our simple listing process where you can add details, upload photos, and set your price. Your listing will be reviewed by our team before going live.
+              </p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-3 text-stone-800">How does tool verification work?</h3>
+              <p className="text-stone-600">
+                Our experts review each listing to verify condition, authenticity, and market value. This ensures transparency and trust for both buyers and sellers. Verified tools receive a badge on their listing.
+              </p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-3 text-stone-800">What are your fees?</h3>
+              <p className="text-stone-600">
+                Listing tools on Benchlot is completely free. We charge a 5% transaction fee for sellers when a tool sells, plus a 3% payment processing fee. There are no hidden costs or subscription fees.
+              </p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-xl font-medium mb-3 text-stone-800">How do local pickups work?</h3>
+              <p className="text-stone-600">
+                After purchase, we connect buyers and sellers to arrange a convenient pickup location. We recommend meeting in public places during daylight hours. Payment is processed through our platform for security.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      {/* Footer */}
+      <footer className="bg-stone-900 text-stone-300 py-12 mt-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="text-white font-serif text-lg mb-4">Benchlot</h3>
+              <p className="text-sm mb-6">
+                The trusted marketplace for tools
+              </p>
+              <p className="text-xs text-stone-400">© 2025 Benchlot. All rights reserved.</p>
+            </div>
+            <div>
+              <h3 className="text-white font-serif text-lg mb-4">Contact</h3>
+              <p className="text-sm mb-2">hello@benchlot.com</p>
+              <p className="text-sm">781-960-3998</p>
+            </div>
+            <div>
+              <h3 className="text-white font-serif text-lg mb-4">Location</h3>
+              <p className="text-sm">Greater Boston Area</p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default HelpPage;

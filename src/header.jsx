@@ -26,6 +26,7 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const checkUser = async () => {
@@ -49,6 +50,16 @@ const Header = () => {
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to marketplace page with search query
+      navigate(`/marketplace?query=${encodeURIComponent(searchQuery.trim())}`);
+      // Clear the search input after search
+      setSearchQuery('');
     }
   };
 
@@ -77,7 +88,7 @@ const Header = () => {
       <div className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 h-8 flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
-          <Link to="/about" className="hover:text-forest-700">About</Link>
+            <Link to="/about" className="hover:text-forest-700">About</Link>
             <span><a href="https://blog.benchlot.com/blog">
               Updates
             </a></span>
@@ -132,14 +143,17 @@ const Header = () => {
 
           {/* Center - Search */}
           <div className="hidden md:flex flex-1 max-w-xl mx-8">
-            <div className="relative w-full">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
               <input
                 type="text"
                 placeholder="Search for tools..."
                 className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-stone-400" />
-            </div>
+              <button type="submit" className="sr-only">Search</button>
+            </form>
           </div>
 
           {/* Right Section */}
@@ -240,14 +254,17 @@ const Header = () => {
 
       {/* Mobile Search - Visible on small screens */}
       <div className="md:hidden border-t p-4">
-        <div className="relative">
+        <form onSubmit={handleSearchSubmit} className="relative">
           <input
             type="text"
             placeholder="Search for tools..."
             className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-stone-400" />
-        </div>
+          <button type="submit" className="sr-only">Search</button>
+        </form>
       </div>
 
       {/* Mobile Menu - Slides in from the left */}
