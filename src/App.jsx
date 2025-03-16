@@ -16,6 +16,7 @@ import AboutPage from './Pages/AboutPage';
 import MyListings from './components/MyListings';
 import AdminFeaturedTools from './components/AdminFeaturedTools';
 import HelpPage from './Pages/HelpPage.jsx';
+import Wishlist from './components/Wishlist';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -141,6 +142,10 @@ function App() {
       <Route path="/signup" element={<AuthPage mode="signup" />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/help" element={<HelpPage />} />
+      <Route 
+    path="/wishlist" 
+    element={<ProtectedRoute element={<Wishlist />} />} 
+  />
       <Route 
         path="/my-listings" 
         element={<ProtectedRoute element={<MyListings />} />} 

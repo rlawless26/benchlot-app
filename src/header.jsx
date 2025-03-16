@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 // Import Supabase client and helpers
-import { getCurrentUser, signOut } from './supabaseClient';
+import { getCurrentUser, signOut, fetchWishlist } from './supabaseClient';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -27,6 +27,7 @@ const Header = () => {
   const [loading, setLoading] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -42,6 +43,21 @@ const Header = () => {
 
     checkUser();
   }, []);
+
+  useEffect(() => {
+    const fetchWishlistCount = async () => {
+      if (user) {
+        try {
+          const { data } = await fetchWishlist();
+          setWishlistCount(data?.length || 0);
+        } catch (error) {
+          console.error('Error fetching wishlist count:', error);
+        }
+      }
+    };
+
+    fetchWishlistCount();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -92,7 +108,7 @@ const Header = () => {
             <span><a href="https://blog.benchlot.com/blog">
               Updates
             </a></span>
-            <span className="text-stone-600">Help</span>
+            <Link to="/help" className="hover:text-forest-700">Help</Link>
           </div>
           <div className="flex items-center gap-4">
           </div>
@@ -119,7 +135,7 @@ const Header = () => {
             <nav className="hidden lg:flex items-center gap-6">
               {categories.map((category) => (
                 <div key={category.name} className="relative group">
-                  <Link 
+                  <Link
                     to={`/marketplace?category=${encodeURIComponent(category.name)}`}
                     className="flex items-center gap-1 text-stone-700 hover:text-forest-700"
                   >
@@ -162,9 +178,14 @@ const Header = () => {
               user ? (
                 // Authenticated user options
                 <>
-                  <button className="text-stone-700 hover:text-forest-700">
+                  <Link to="/wishlist" className="text-stone-700 hover:text-forest-700 relative">
                     <Heart className="h-5 w-5" />
-                  </button>
+                    {wishlistCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-forest-700 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                        {wishlistCount > 9 ? '9+' : wishlistCount}
+                      </span>
+                    )}
+                  </Link>
 
                   <button className="text-stone-700 hover:text-forest-700">
                     <MessageSquare className="h-5 w-5" />
@@ -290,7 +311,7 @@ const Header = () => {
             <div className="space-y-4">
               {categories.map((category) => (
                 <div key={category.name} className="space-y-2">
-                  <Link 
+                  <Link
                     to={`/marketplace?category=${encodeURIComponent(category.name)}`}
                     className="font-medium text-stone-800 block hover:text-forest-700"
                     onClick={() => setIsMenuOpen(false)}
