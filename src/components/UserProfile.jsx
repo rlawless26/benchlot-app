@@ -27,6 +27,7 @@ import {
 // Import Header component
 import Header from '../header';
 import ToolListingCard from './ToolListingCard';
+import MessageBanner from './MessageBanner';
 
 const UserProfile = () => {
   const { id } = useParams();
@@ -49,13 +50,6 @@ const UserProfile = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editError, setEditError] = useState(null);
   const [editSuccess, setEditSuccess] = useState(false);
-
-  // Message state
-  const [messageText, setMessageText] = useState('');
-  const [showMessageForm, setShowMessageForm] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [messageError, setMessageError] = useState(null);
-  const [messageSent, setMessageSent] = useState(false);
 
   // File upload state
   const [selectedFile, setSelectedFile] = useState(null);
@@ -255,41 +249,6 @@ const UserProfile = () => {
       setEditError(error.message || 'Failed to update profile. Please try again.');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // Send a message to the user
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-
-    if (!messageText.trim()) {
-      setMessageError('Please enter a message.');
-      return;
-    }
-
-    setSendingMessage(true);
-    setMessageError(null);
-    setMessageSent(false);
-
-    try {
-      const { error } = await sendMessage(profile.id, messageText);
-
-      if (error) throw error;
-
-      setMessageSent(true);
-      setMessageText('');
-
-      // Close the message form after a short delay
-      setTimeout(() => {
-        setShowMessageForm(false);
-        setMessageSent(false);
-      }, 2000);
-
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setMessageError(error.message || 'Failed to send message. Please try again.');
-    } finally {
-      setSendingMessage(false);
     }
   };
 
@@ -613,64 +572,12 @@ const UserProfile = () => {
                   )}
                 </div>
 
-                {/* Contact button for other users */}
+                {/* Contact button for other users - Using MessageBanner component */}
                 {currentUser && (
                   <div className="flex justify-center mt-6">
-                    {showMessageForm ? (
-                      <div className="w-full max-w-md">
-                        <h3 className="font-medium text-lg mb-2">
-                          Send message to {profile.username || 'User'}
-                        </h3>
-                        
-                        <form onSubmit={handleSendMessage}>
-                          <textarea
-                            value={messageText}
-                            onChange={(e) => setMessageText(e.target.value)}
-                            className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700 mb-3"
-                            rows={4}
-                            placeholder="Write your message here..."
-                          ></textarea>
-                          
-                          {messageError && (
-                            <div className="text-red-600 text-sm mb-3">{messageError}</div>
-                          )}
-                          
-                          {messageSent && (
-                            <div className="text-green-600 text-sm mb-3">Message sent successfully!</div>
-                          )}
-                          
-                          <div className="flex gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setShowMessageForm(false)}
-                              className="px-4 py-2 border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center"
-                              disabled={sendingMessage}
-                            >
-                              {sendingMessage ? (
-                                <>
-                                  <Loader className="h-4 w-4 mr-2 animate-spin" />
-                                  Sending...
-                                </>
-                              ) : 'Send Message'}
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setShowMessageForm(true)}
-                        className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center"
-                      >
-                        <MessageSquare className="h-5 w-5 mr-2" />
-                        Contact {profile.username || 'User'}
-                      </button>
-                    )}
+                    <div className="w-full max-w-md">
+                      <MessageBanner recipient={profile} />
+                    </div>
                   </div>
                 )}
               </div>

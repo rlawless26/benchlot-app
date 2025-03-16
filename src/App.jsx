@@ -17,6 +17,8 @@ import MyListings from './components/MyListings';
 import AdminFeaturedTools from './components/AdminFeaturedTools';
 import HelpPage from './Pages/HelpPage.jsx';
 import Wishlist from './components/Wishlist';
+import Messages from './components/Messages';
+import SettingsPage from './Pages/SettingsPage';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -28,14 +30,14 @@ const ProtectedRoute = ({ element }) => {
       setSession(session);
       setLoading(false);
     };
-    
+
     checkUser();
   }, []);
 
   if (loading) return <div>Loading...</div>;
-  
+
   if (!session) return <Navigate to="/login" replace />;
-  
+
   return element;
 };
 
@@ -49,29 +51,29 @@ const AdminRoute = ({ element }) => {
       try {
         // Get the current user session
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (!user) {
           setDebugInfo('No authenticated user found');
           setIsAdmin(false);
           setLoading(false);
           return;
         }
-        
+
         setDebugInfo(`Auth user ID: ${user.id}`);
-        
+
         // Get the user's role from the users table
         const { data, error } = await supabase
           .from('users')
           .select('role')
           .eq('id', user.id)
           .single();
-        
+
         if (error) {
           setDebugInfo(`Error fetching user role: ${error.message}`);
         } else {
           setDebugInfo(`User role: ${data?.role || 'no role found'}`);
         }
-        
+
         // Set isAdmin based on the user's role
         setIsAdmin(data?.role === 'admin');
       } catch (err) {
@@ -81,14 +83,14 @@ const AdminRoute = ({ element }) => {
         setLoading(false);
       }
     };
-    
+
     checkAdminStatus();
   }, []);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
-  
+
   if (!isAdmin) {
     return (
       <div className="p-8 text-center">
@@ -101,7 +103,7 @@ const AdminRoute = ({ element }) => {
       </div>
     );
   }
-  
+
   return element;
 };
 
@@ -142,26 +144,34 @@ function App() {
       <Route path="/signup" element={<AuthPage mode="signup" />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/help" element={<HelpPage />} />
-      <Route 
-    path="/wishlist" 
-    element={<ProtectedRoute element={<Wishlist />} />} 
-  />
-      <Route 
-        path="/my-listings" 
-        element={<ProtectedRoute element={<MyListings />} />} 
+      <Route
+        path="/wishlist"
+        element={<ProtectedRoute element={<Wishlist />} />}
       />
-      
+      <Route
+        path="/my-listings"
+        element={<ProtectedRoute element={<MyListings />} />}
+      />
+      <Route
+        path="/settings"
+        element={<ProtectedRoute element={<SettingsPage />} />}
+      />
+      <Route
+        path="/messages"
+        element={<ProtectedRoute element={<Messages />} />}
+      />
+
       {/* Admin Routes */}
-      <Route 
-        path="/admin" 
+      <Route
+        path="/admin"
         element={
-          <AdminRoute 
+          <AdminRoute
             element={
               <div className="min-h-screen bg-stone-50">
                 <header className="bg-white border-b py-4 px-6">
                   <h1 className="text-2xl font-serif">Benchlot Admin</h1>
                 </header>
-                
+
                 {/* Admin Dashboard */}
                 <div className="p-6">
                   <h2 className="text-xl font-medium mb-4">Admin Dashboard</h2>
@@ -175,31 +185,31 @@ function App() {
                       {/* Add more admin nav links here */}
                     </ul>
                   </nav>
-                  
+
                   <p>Select an option from the menu above.</p>
                 </div>
               </div>
-            } 
+            }
           />
-        } 
+        }
       />
-      
-      <Route 
-        path="/admin/featured-tools" 
+
+      <Route
+        path="/admin/featured-tools"
         element={
-          <AdminRoute 
+          <AdminRoute
             element={
               <div className="min-h-screen bg-stone-50">
                 <header className="bg-white border-b py-4 px-6 flex justify-between items-center">
                   <h1 className="text-2xl font-serif">Benchlot Admin</h1>
                   <a href="/admin" className="text-forest-700 hover:underline">Back to Dashboard</a>
                 </header>
-                
+
                 <AdminFeaturedTools />
               </div>
-            } 
+            }
           />
-        } 
+        }
       />
     </Routes>
   );

@@ -1,4 +1,4 @@
-// src/supabaseClient.js - add these functions to your existing file
+// src/supabaseClient.js
 import { createClient } from '@supabase/supabase-js'
 
 // Keep your existing supabase client initialization
@@ -6,8 +6,6 @@ const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
-
-// Add these functions to your existing supabaseClient.js file
 
 // Auth helper functions (if you don't have them already)
 export const signUp = async (email, password, userData) => {
@@ -376,22 +374,27 @@ export const isToolInWishlist = async (toolId) => {
 
 // User profile functions
 export const updateUserProfile = async (profileData) => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { error: { message: 'You must be logged in to update your profile' } };
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: { message: 'You must be logged in to update your profile' } };
+  }
   
   const { data, error } = await supabase
     .from('users')
     .update(profileData)
     .eq('id', user.id)
-    .select()
-    .single();
+    .select();
   
   return { data, error };
 };
 
 export const uploadProfileImage = async (file) => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { error: { message: 'You must be logged in to upload a profile image' } };
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: { message: 'You must be logged in to upload a profile image' } };
+  }
   
   const fileExt = file.name.split('.').pop();
   const fileName = `${user.id}.${fileExt}`;
@@ -428,6 +431,108 @@ export const uploadProfileImage = async (file) => {
     .select();
   
   return { data: { ...updatedProfile, signedUrl }, error: updateError };
+};
+
+export const removeToolImage = async (toolId, imageUrl) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to remove images' } };
+  
+  // Get current images
+  const { data: tool } = await fetchToolById(toolId);
+  if (!tool || !tool.images) return { error: { message: 'Tool not found' } };
+  
+  // Filter out the removed image
+  const updatedImages = tool.images.filter(url => url !== imageUrl);
+  
+  // Update the tool
+  const { data, error } = await supabase
+    .from('tools')
+    .update({
+      images: updatedImages,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', toolId)
+    .eq('seller_id', user.id) // Enforce ownership
+    .select();
+  
+  // Attempt to remove the file from storage (best effort)
+  try {
+    // Extract the file path from the URL
+    const url = new URL(imageUrl);
+    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/tool-images\/(.+)/);
+    
+    if (pathMatch && pathMatch[1]) {
+      const filePath = pathMatch[1];
+      
+      // Remove from storage (don't wait for this to complete)
+      supabase.storage
+        .from('tool-images')
+        .remove([filePath])
+        .then(({ error }) => {
+          if (error) {
+            console.error("Failed to remove file from storage:", error);
+          }
+        });
+    }
+  } catch (storageError) {
+    console.error("Error parsing image URL:", storageError);
+    // Continue anyway - updating the database is more important than cleaning storage
+  }
+  
+  return { data, error };
+};
+
+// Update user password
+export const updateUserPassword = async (currentPassword, newPassword) => {
+  try {
+    // First verify the current password is correct by attempting to sign in
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData || !userData.user) {
+      return { error: { message: 'No user is currently logged in' } };
+    }
+    
+    // Try signing in with current password to verify it
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userData.user.email,
+      password: currentPassword,
+    });
+    
+    if (signInError) {
+      return { error: { message: 'Current password is incorrect' } };
+    }
+    
+    // If current password verification is successful, update to new password
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    return { error };
+  } catch (error) {
+    console.error('Error updating password:', error);
+    return { error };
+  }
+};
+
+// Update user preferences (notifications, privacy, shipping)
+export const updateUserPreferences = async (preferencesData) => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    
+    if (!userData || !userData.user) {
+      return { error: { message: 'You must be logged in to update preferences' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('users')
+      .update(preferencesData)
+      .eq('id', userData.user.id)
+      .select();
+    
+    return { data, error };
+  } catch (error) {
+    console.error('Error updating user preferences:', error);
+    return { error };
+  }
 };
 
 // Get user's listings
@@ -498,6 +603,19 @@ export const sendMessage = async (recipientId, content, toolId = null) => {
   
   return { data, error };
 };
+// Get unread message count for the current user
+export const getUnreadMessageCount = async () => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { data: 0, error: null };
+  
+  const { count, error } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('recipient_id', user.id)
+    .eq('is_read', false);
+  
+  return { data: count || 0, error };
+};
 
 export const fetchConversations = async () => {
   const { data: user } = await getCurrentUser();
@@ -518,6 +636,7 @@ export const fetchConversations = async () => {
     `)
     .eq('sender_id', user.id)
     .order('created_at', { ascending: false });
+    
   
   const { data: receivedMessages, error: receivedError } = await supabase
     .from('messages')
@@ -586,56 +705,6 @@ export const markMessagesAsRead = async (otherUserId) => {
     .eq('recipient_id', user.id)
     .eq('sender_id', otherUserId)
     .eq('is_read', false);
-  
-  return { data, error };
-};
-// Add this function to your supabaseClient.js file
-
-export const removeToolImage = async (toolId, imageUrl) => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { error: { message: 'You must be logged in to remove images' } };
-  
-  // Get current images
-  const { data: tool } = await fetchToolById(toolId);
-  if (!tool || !tool.images) return { error: { message: 'Tool not found' } };
-  
-  // Filter out the removed image
-  const updatedImages = tool.images.filter(url => url !== imageUrl);
-  
-  // Update the tool
-  const { data, error } = await supabase
-    .from('tools')
-    .update({
-      images: updatedImages,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', toolId)
-    .eq('seller_id', user.id) // Enforce ownership
-    .select();
-  
-  // Attempt to remove the file from storage (best effort)
-  try {
-    // Extract the file path from the URL
-    const url = new URL(imageUrl);
-    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/tool-images\/(.+)/);
-    
-    if (pathMatch && pathMatch[1]) {
-      const filePath = pathMatch[1];
-      
-      // Remove from storage (don't wait for this to complete)
-      supabase.storage
-        .from('tool-images')
-        .remove([filePath])
-        .then(({ error }) => {
-          if (error) {
-            console.error("Failed to remove file from storage:", error);
-          }
-        });
-    }
-  } catch (storageError) {
-    console.error("Error parsing image URL:", storageError);
-    // Continue anyway - updating the database is more important than cleaning storage
-  }
   
   return { data, error };
 };

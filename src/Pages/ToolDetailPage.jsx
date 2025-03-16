@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Heart, 
-  Share, 
-  MessageSquare, 
-  MapPin, 
-  Star, 
-  Check, 
+import {
+  Heart,
+  Share,
+  MessageSquare,
+  MapPin,
+  Star,
+  Check,
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
@@ -15,22 +15,23 @@ import {
 } from 'lucide-react';
 
 // Import Supabase client and helpers
-import { 
-  fetchToolById, 
-  fetchSimilarTools, 
-  addToWishlist, 
-  removeFromWishlist, 
+import {
+  fetchToolById,
+  fetchSimilarTools,
+  addToWishlist,
+  removeFromWishlist,
   isToolInWishlist,
   getCurrentUser
 } from '../supabaseClient';
 
 // Import Header component
 import Header from '../header';
+import MessageModal from '../components/MessageModal';
 
 const ToolDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // State variables
   const [tool, setTool] = useState(null);
   const [similarTools, setSimilarTools] = useState([]);
@@ -39,7 +40,54 @@ const ToolDetailPage = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [showMessageModal, setShowMessageModal] = useState(false);
+
+  // Add this function before the return statement in ToolDetailPage.jsx
+
+  // Handle sharing the tool
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareTitle = `Check out this ${tool.name} on Benchlot`;
+    const shareText = `${tool.name} - ${formatPrice(tool.current_price)} - Available on Benchlot`;
+
+    // Try to use the Web Share API first
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        console.log("Shared successfully");
+      } catch (err) {
+        console.error("Error sharing:", err);
+        // Fall back to clipboard if sharing was cancelled or failed
+        copyToClipboard(shareUrl);
+      }
+    } else {
+      // Fall back to clipboard for browsers that don't support Web Share API
+      copyToClipboard(shareUrl);
+    }
+  };
+
+  // Helper function to copy text to clipboard
+  const copyToClipboard = (text) => {
+    // Create a temporary input element
+    const input = document.createElement('input');
+    input.style.position = 'fixed';
+    input.style.opacity = 0;
+    input.value = text;
+    document.body.appendChild(input);
+
+    // Select and copy the text
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+
+    // Show a toast notification (you'll need to implement this or use a library)
+    alert("Link copied to clipboard!");
+  };
+
   console.log("ToolDetailPage - ID from URL params:", id);
 
   // Check if user is logged in
@@ -48,17 +96,17 @@ const ToolDetailPage = () => {
       const { data } = await getCurrentUser();
       setUser(data);
     };
-    
+
     checkUser();
   }, []);
-  
+
   // Fetch tool data and check wishlist status
   useEffect(() => {
     const loadToolData = async () => {
       // Get URL parameter ID
       let toolId = id;
       console.log("ID from URL params:", toolId);
-      
+
       // If no ID in URL or it doesn't look valid, check localStorage
       if (!toolId || toolId.length < 30) {
         const savedId = localStorage.getItem('lastCreatedToolId');
@@ -71,7 +119,7 @@ const ToolDetailPage = () => {
           localStorage.removeItem('lastCreatedToolId');
         }
       }
-      
+
       if (!toolId) {
         setError('No valid tool ID provided');
         setLoading(false);
@@ -80,31 +128,31 @@ const ToolDetailPage = () => {
 
       setLoading(true);
       setError(null);
-      
+
       try {
         console.log("Fetching tool with ID:", toolId);
         const { data, error } = await fetchToolById(toolId);
-        
+
         console.log("API response:", { data, error });
-        
+
         if (error) {
           console.error("API error:", error);
           throw error;
         }
-        
+
         if (!data) {
           console.error("No tool data returned for ID:", toolId);
           throw new Error('No tool found with this ID');
         }
-        
+
         setTool(data);
-        
+
         // Fetch similar tools
         if (data.category) {
           const { data: similarData } = await fetchSimilarTools(toolId, data.category, 3);
           setSimilarTools(similarData || []);
         }
-        
+
         // Check if tool is in user's wishlist
         if (user) {
           const { data: wishlistStatus } = await isToolInWishlist(toolId);
@@ -117,10 +165,10 @@ const ToolDetailPage = () => {
         setLoading(false);
       }
     };
-    
+
     loadToolData();
   }, [id, user]);
-  
+
   // Toggle wishlist status
   const toggleWishlist = async () => {
     if (!user) {
@@ -128,21 +176,21 @@ const ToolDetailPage = () => {
       navigate('/login', { state: { from: `/tool/${id}` } });
       return;
     }
-    
+
     try {
       if (inWishlist) {
         await removeFromWishlist(tool.id);
       } else {
         await addToWishlist(tool.id);
       }
-      
+
       setInWishlist(!inWishlist);
     } catch (err) {
       console.error('Error toggling wishlist:', err);
       // Show error message to user
     }
   };
-  
+
   // Format price with $ and commas
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -152,37 +200,35 @@ const ToolDetailPage = () => {
       maximumFractionDigits: 2
     }).format(price);
   };
-  
+
   // Navigate to previous image
   const prevImage = () => {
     if (tool?.images?.length > 0) {
-      setActiveImageIndex((prev) => 
+      setActiveImageIndex((prev) =>
         prev === 0 ? tool.images.length - 1 : prev - 1
       );
     }
   };
-  
+
   // Navigate to next image
   const nextImage = () => {
     if (tool?.images?.length > 0) {
-      setActiveImageIndex((prev) => 
+      setActiveImageIndex((prev) =>
         prev === tool.images.length - 1 ? 0 : prev + 1
       );
     }
   };
-  
+
   // Start a conversation with the seller
   const contactSeller = () => {
     if (!user) {
       navigate('/login', { state: { from: `/tool/${id}` } });
       return;
     }
-    
-    // Navigate to messages or open message modal
-    // This will depend on your app's messaging implementation
-    navigate('/messages', { state: { recipient: tool.seller_id, toolId: tool.id } });
+
+    setShowMessageModal(true);
   };
-  
+
   // If loading, show loading state
   if (loading) {
     return (
@@ -197,7 +243,7 @@ const ToolDetailPage = () => {
       </div>
     );
   }
-  
+
   // If error, show error state
   if (error) {
     return (
@@ -213,7 +259,7 @@ const ToolDetailPage = () => {
               </div>
             </div>
             <div className="mt-4">
-              <button 
+              <button
                 className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
                 onClick={() => navigate('/marketplace')}
               >
@@ -226,7 +272,7 @@ const ToolDetailPage = () => {
       </div>
     );
   }
-  
+
   // If no tool data, show not found state
   if (!tool) {
     return (
@@ -242,7 +288,7 @@ const ToolDetailPage = () => {
               </div>
             </div>
             <div className="mt-4">
-              <button 
+              <button
                 className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
                 onClick={() => navigate('/marketplace')}
               >
@@ -254,16 +300,16 @@ const ToolDetailPage = () => {
       </div>
     );
   }
-  
+
   // Main content when tool is loaded successfully
   return (
     <div className="bg-base min-h-screen">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb navigation */}
         <div className="mb-6">
-          <button 
+          <button
             className="flex items-center text-stone-600 hover:text-forest-700"
             onClick={() => navigate('/marketplace')}
           >
@@ -271,7 +317,7 @@ const ToolDetailPage = () => {
             Back to Marketplace
           </button>
         </div>
-        
+
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left column - Images */}
@@ -279,8 +325,8 @@ const ToolDetailPage = () => {
             {/* Main image with error handling */}
             <div className="bg-white rounded-lg overflow-hidden shadow-md relative">
               {tool.images && tool.images.length > 0 ? (
-                <img 
-                  src={tool.images[activeImageIndex] || '/api/placeholder/400/300'} 
+                <img
+                  src={tool.images[activeImageIndex] || '/api/placeholder/400/300'}
                   alt={tool.name}
                   className="w-full h-96 object-contain"
                   onError={(e) => {
@@ -294,17 +340,17 @@ const ToolDetailPage = () => {
                   <span className="text-stone-400">No image available</span>
                 </div>
               )}
-              
+
               {/* Image navigation arrows */}
               {tool.images && tool.images.length > 1 && (
                 <>
-                  <button 
+                  <button
                     className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-2 shadow hover:bg-opacity-100"
                     onClick={prevImage}
                   >
                     <ChevronLeft className="h-5 w-5 text-stone-700" />
                   </button>
-                  <button 
+                  <button
                     className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-2 shadow hover:bg-opacity-100"
                     onClick={nextImage}
                   >
@@ -312,7 +358,7 @@ const ToolDetailPage = () => {
                   </button>
                 </>
               )}
-              
+
               {/* Verification badge */}
               {tool.is_verified && (
                 <div className="absolute top-4 right-4 bg-forest-700 text-white text-xs px-2 py-1 rounded-full flex items-center">
@@ -321,19 +367,19 @@ const ToolDetailPage = () => {
                 </div>
               )}
             </div>
-            
+
             {/* Thumbnail images with error handling */}
             {tool.images && tool.images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {tool.images.map((image, index) => (
-                  <button 
+                  <button
                     key={index}
                     className={`w-20 h-20 rounded-md overflow-hidden border-2 ${index === activeImageIndex ? 'border-forest-700' : 'border-transparent'}`}
                     onClick={() => setActiveImageIndex(index)}
                   >
-                    <img 
-                      src={image} 
-                      alt={`${tool.name} thumbnail ${index + 1}`} 
+                    <img
+                      src={image}
+                      alt={`${tool.name} thumbnail ${index + 1}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.onerror = null;
@@ -344,13 +390,13 @@ const ToolDetailPage = () => {
                 ))}
               </div>
             )}
-            
+
             {/* Tool description */}
             <div className="bg-white rounded-lg p-6 shadow-md">
               <h2 className="text-lg font-medium text-stone-800 mb-4">Description</h2>
               <p className="text-stone-600 whitespace-pre-line">{tool.description}</p>
             </div>
-            
+
             {/* Specifications */}
             <div className="bg-white rounded-lg p-6 shadow-md">
               <h2 className="text-lg font-medium text-stone-800 mb-4">Specifications</h2>
@@ -394,13 +440,13 @@ const ToolDetailPage = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Right column - Pricing, seller info, actions */}
           <div className="space-y-4">
             {/* Main info card */}
             <div className="bg-white rounded-lg p-6 shadow-md">
               <h1 className="text-2xl font-medium text-stone-800 mb-2">{tool.name}</h1>
-              
+
               {/* Pricing */}
               <div className="mb-4">
                 <div className="flex items-baseline">
@@ -413,20 +459,20 @@ const ToolDetailPage = () => {
                     </span>
                   )}
                 </div>
-                
+
                 {tool.original_price && tool.original_price > tool.current_price && (
                   <span className="text-sm text-green-600">
                     You save {formatPrice(tool.original_price - tool.current_price)} ({Math.round((1 - tool.current_price / tool.original_price) * 100)}%)
                   </span>
                 )}
               </div>
-              
+
               {/* Location */}
               <div className="flex items-center mb-4">
                 <MapPin className="h-4 w-4 text-stone-400 mr-2" />
                 <span className="text-stone-600">{tool.location}</span>
               </div>
-              
+
               {/* Category */}
               <div className="mb-6">
                 <span className="inline-block bg-stone-100 text-stone-800 text-xs px-2 py-1 rounded mr-2">
@@ -438,44 +484,44 @@ const ToolDetailPage = () => {
                   </span>
                 )}
               </div>
-              
+
               {/* Action buttons */}
               <div className="grid grid-cols-1 gap-3 mb-6">
-                <button 
+                <button
                   className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center justify-center font-medium"
                   onClick={contactSeller}
                 >
                   <MessageSquare className="h-5 w-5 mr-2" />
                   Contact Seller
                 </button>
-                
-                <button 
+
+                <button
                   className={`w-full py-3 rounded-md flex items-center justify-center font-medium ${inWishlist ? 'bg-forest-100 text-forest-700 border border-forest-300' : 'bg-white border border-stone-300 text-stone-700 hover:bg-stone-50'}`}
                   onClick={toggleWishlist}
                 >
                   <Heart className={`h-5 w-5 mr-2 ${inWishlist ? 'fill-forest-700' : ''}`} />
                   {inWishlist ? 'Saved to Wishlist' : 'Save to Wishlist'}
                 </button>
-                
-                <button 
+                <button
                   className="w-full py-3 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 flex items-center justify-center font-medium"
+                  onClick={handleShare}
                 >
                   <Share className="h-5 w-5 mr-2" />
                   Share
                 </button>
               </div>
             </div>
-            
+
             {/* Seller info card with avatar error handling */}
             {tool.seller && (
               <div className="bg-white rounded-lg p-6 shadow-md">
                 <h2 className="text-lg font-medium text-stone-800 mb-4">About the Seller</h2>
-                
+
                 <div className="flex items-center mb-4">
                   <div className="w-12 h-12 bg-stone-200 rounded-full overflow-hidden mr-3">
                     {tool.seller.avatar_url ? (
-                      <img 
-                        src={tool.seller.avatar_url} 
+                      <img
+                        src={tool.seller.avatar_url}
                         alt={`${tool.seller.username || 'Seller'}'s avatar`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -492,12 +538,12 @@ const ToolDetailPage = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div>
                     <h3 className="font-medium text-stone-800">
                       {tool.seller.username || tool.seller.full_name || 'Anonymous Seller'}
                     </h3>
-                    
+
                     {tool.seller.rating && (
                       <div className="flex items-center">
                         <Star className="h-3 w-3 text-yellow-500 mr-1" fill="#EAB308" />
@@ -508,15 +554,15 @@ const ToolDetailPage = () => {
                     )}
                   </div>
                 </div>
-                
+
                 {tool.seller.location && (
                   <div className="flex items-center text-sm text-stone-600 mb-4">
                     <MapPin className="h-4 w-4 text-stone-400 mr-2" />
                     <span>{tool.seller.location}</span>
                   </div>
                 )}
-                
-                <button 
+
+                <button
                   className="w-full py-2 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 text-sm"
                   onClick={() => navigate(`/profile/${tool.seller.id}`)}
                 >
@@ -526,19 +572,19 @@ const ToolDetailPage = () => {
             )}
           </div>
         </div>
-        
+
         {/* Similar tools section with error handling */}
         {similarTools.length > 0 && (
           <div className="mt-12">
             <h2 className="text-2xl font-medium text-stone-800 mb-6">Similar Tools</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {similarTools.map(similarTool => (
                 <div key={similarTool.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                   <a href={`/tool/${similarTool.id}`} className="block">
                     <div className="relative h-48">
-                      <img 
-                        src={similarTool.images?.[0] || '/api/placeholder/300/200'} 
+                      <img
+                        src={similarTool.images?.[0] || '/api/placeholder/300/200'}
                         alt={similarTool.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -561,6 +607,17 @@ const ToolDetailPage = () => {
           </div>
         )}
       </main>
+
+      {/* Message Modal */}
+      {showMessageModal && tool.seller && (
+        <MessageModal
+          isOpen={showMessageModal}
+          onClose={() => setShowMessageModal(false)}
+          recipient={tool.seller}
+          toolId={tool.id}
+          toolName={tool.name}
+        />
+      )}
     </div>
   );
 };

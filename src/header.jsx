@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 // Import Supabase client and helpers
-import { getCurrentUser, signOut, fetchWishlist } from './supabaseClient';
+import { getCurrentUser, signOut, getUnreadMessageCount, supabase } from './supabaseClient';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -26,8 +26,7 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -44,19 +43,58 @@ const Header = () => {
     checkUser();
   }, []);
 
+  // Fetch unread message count
   useEffect(() => {
-    const fetchWishlistCount = async () => {
-      if (user) {
-        try {
-          const { data } = await fetchWishlist();
-          setWishlistCount(data?.length || 0);
-        } catch (error) {
-          console.error('Error fetching wishlist count:', error);
-        }
+    if (!user) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const { count, error } = await getUnreadMessageCount();
+        if (error) throw error;
+        setUnreadMessages(count || 0);
+      } catch (err) {
+        console.error('Error fetching unread message count:', err);
       }
     };
 
-    fetchWishlistCount();
+    fetchUnreadCount();
+
+    // Set up realtime subscription for new messages
+    const messageSubscription = supabase
+      .channel('messages-channel')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `recipient_id=eq.${user.id}`
+      }, payload => {
+        // If the message is unread, increment the counter
+        if (!payload.new.is_read) {
+          setUnreadMessages(prev => prev + 1);
+        }
+      })
+      .subscribe();
+
+    // Set up realtime subscription for updates to messages (marking as read)
+    const messageUpdatesSubscription = supabase
+      .channel('messages-updates-channel')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `recipient_id=eq.${user.id}`
+      }, payload => {
+        // If a message was marked as read, refresh the count
+        if (payload.new.is_read && !payload.old.is_read) {
+          fetchUnreadCount();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      messageSubscription.unsubscribe();
+      messageUpdatesSubscription.unsubscribe();
+    };
   }, [user]);
 
   const handleLogout = async () => {
@@ -66,16 +104,6 @@ const Header = () => {
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
-    }
-  };
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      // Navigate to marketplace page with search query
-      navigate(`/marketplace?query=${encodeURIComponent(searchQuery.trim())}`);
-      // Clear the search input after search
-      setSearchQuery('');
     }
   };
 
@@ -104,7 +132,7 @@ const Header = () => {
       <div className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 h-8 flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
-            <Link to="/about" className="hover:text-forest-700">About</Link>
+          <Link to="/about" className="hover:text-forest-700">About</Link>
             <span><a href="https://blog.benchlot.com/blog">
               Updates
             </a></span>
@@ -135,7 +163,7 @@ const Header = () => {
             <nav className="hidden lg:flex items-center gap-6">
               {categories.map((category) => (
                 <div key={category.name} className="relative group">
-                  <Link
+                  <Link 
                     to={`/marketplace?category=${encodeURIComponent(category.name)}`}
                     className="flex items-center gap-1 text-stone-700 hover:text-forest-700"
                   >
@@ -159,17 +187,14 @@ const Header = () => {
 
           {/* Center - Search */}
           <div className="hidden md:flex flex-1 max-w-xl mx-8">
-            <form onSubmit={handleSearchSubmit} className="relative w-full">
+            <div className="relative w-full">
               <input
                 type="text"
                 placeholder="Search for tools..."
                 className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-stone-400" />
-              <button type="submit" className="sr-only">Search</button>
-            </form>
+            </div>
           </div>
 
           {/* Right Section */}
@@ -178,22 +203,18 @@ const Header = () => {
               user ? (
                 // Authenticated user options
                 <>
-                  <Link to="/wishlist" className="text-stone-700 hover:text-forest-700 relative">
+                    <Link to="/wishlist" className="text-stone-700 hover:text-forest-700">
                     <Heart className="h-5 w-5" />
-                    {wishlistCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-forest-700 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                        {wishlistCount > 9 ? '9+' : wishlistCount}
+                  </Link>
+
+                  <Link to="/messages" className="text-stone-700 hover:text-forest-700 relative">
+                    <MessageSquare className="h-5 w-5" />
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-forest-700 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                        {unreadMessages > 9 ? '9+' : unreadMessages}
                       </span>
                     )}
                   </Link>
-
-                  <button className="text-stone-700 hover:text-forest-700">
-                    <MessageSquare className="h-5 w-5" />
-                  </button>
-
-                  <button className="text-stone-700 hover:text-forest-700">
-                    <Bell className="h-5 w-5" />
-                  </button>
 
                   <div className="relative">
                     <button
@@ -275,17 +296,14 @@ const Header = () => {
 
       {/* Mobile Search - Visible on small screens */}
       <div className="md:hidden border-t p-4">
-        <form onSubmit={handleSearchSubmit} className="relative">
+        <div className="relative">
           <input
             type="text"
             placeholder="Search for tools..."
             className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-stone-400" />
-          <button type="submit" className="sr-only">Search</button>
-        </form>
+        </div>
       </div>
 
       {/* Mobile Menu - Slides in from the left */}
@@ -311,7 +329,7 @@ const Header = () => {
             <div className="space-y-4">
               {categories.map((category) => (
                 <div key={category.name} className="space-y-2">
-                  <Link
+                  <Link 
                     to={`/marketplace?category=${encodeURIComponent(category.name)}`}
                     className="font-medium text-stone-800 block hover:text-forest-700"
                     onClick={() => setIsMenuOpen(false)}
@@ -350,6 +368,15 @@ const Header = () => {
                     <Link to="/wishlist" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
                       <Heart className="h-5 w-5" />
                       Saved Tools
+                    </Link>
+                    <Link to="/messages" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
+                      <MessageSquare className="h-5 w-5" />
+                      Messages
+                      {unreadMessages > 0 && (
+                        <span className="bg-forest-700 text-white text-xs rounded-full px-2 py-1 ml-auto">
+                          {unreadMessages}
+                        </span>
+                      )}
                     </Link>
                     <Link to="/listtool" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
                       <Plus className="h-5 w-5" />
