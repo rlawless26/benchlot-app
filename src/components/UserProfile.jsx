@@ -61,21 +61,27 @@ const UserProfile = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // In UserProfile.jsx, update the fetchProfileData function in useEffect
+  // Debug logging for render
+  console.log("Rendering UserProfile with params ID:", id);
+
   useEffect(() => {
     const fetchProfileData = async () => {
+      console.log("Starting profile fetch with ID param:", id);
       setLoading(true);
       setError(null);
 
       try {
         // Get current user
         const { data: user } = await getCurrentUser();
+        console.log("Current user data:", user);
         setCurrentUser(user);
 
         // If no ID parameter or /profile route (without ID), treat as "me" profile
         const effectiveId = id || 'me';
+        console.log("Effective ID for profile fetch:", effectiveId);
 
         if ((effectiveId === 'me' || !effectiveId) && user) {
+          console.log("Viewing own profile");
           setIsCurrentUser(true);
           setProfile(user.profile);
           setEditFormData({
@@ -84,11 +90,14 @@ const UserProfile = () => {
             location: user.profile?.location || '',
             bio: user.profile?.bio || ''
           });
+          console.log("Set profile to user.profile:", user.profile);
         } else if ((effectiveId === 'me' || !effectiveId) && !user) {
+          console.log("Attempted to view own profile but not logged in, redirecting");
           // Redirect to login if trying to view own profile but not logged in
           window.location.href = '/login?redirect=profile';
           return;
         } else if (effectiveId && effectiveId !== 'me') {
+          console.log("Fetching other user profile with ID:", effectiveId);
           // Only try to fetch if id exists and is not 'me'
           const { data, error } = await supabase
             .from('users')
@@ -96,19 +105,38 @@ const UserProfile = () => {
             .eq('id', effectiveId)
             .single();
 
-          if (error) throw error;
+          console.log("Other user profile API response:", data);
+          console.log("Other user profile API error:", error);
+
+          if (error) {
+            console.error("Error fetching profile:", error);
+            throw error;
+          }
+          
+          if (!data) {
+            console.error("No profile data returned for ID:", effectiveId);
+            throw new Error("User profile not found");
+          }
+          
           setProfile(data);
           setIsCurrentUser(user && user.id === effectiveId);
+          console.log("Set profile state to:", data);
+          console.log("Set isCurrentUser to:", user && user.id === effectiveId);
         }
 
         // Fetch user's listings and reviews (only if we have a valid user ID)
         const targetUserId = (effectiveId === 'me' || !effectiveId) ? user?.id : effectiveId;
+        console.log("Target user ID for listings/reviews:", targetUserId);
 
         if (targetUserId) {
+          console.log("Fetching listings and reviews for user:", targetUserId);
           const [listingsResult, reviewsResult] = await Promise.all([
             fetchUserListings(targetUserId),
             fetchUserReviews(targetUserId)
           ]);
+
+          console.log("Listings result:", listingsResult);
+          console.log("Reviews result:", reviewsResult);
 
           if (listingsResult.error) console.error("Error fetching listings:", listingsResult.error);
           if (reviewsResult.error) console.error("Error fetching reviews:", reviewsResult.error);
@@ -122,11 +150,19 @@ const UserProfile = () => {
         setError(error.message || 'Failed to load profile data. Please try again.');
       } finally {
         setLoading(false);
+        console.log("Profile fetch complete, loading set to false");
       }
     };
 
     fetchProfileData();
   }, [id]);
+
+  // Monitor state changes
+  useEffect(() => {
+    console.log("Profile state updated:", profile);
+    console.log("isCurrentUser state updated:", isCurrentUser);
+    console.log("userListings updated:", userListings);
+  }, [profile, isCurrentUser, userListings]);
 
   // Handle edit form input changes
   const handleEditChange = (e) => {
@@ -257,6 +293,14 @@ const UserProfile = () => {
     }
   };
 
+  // Get placeholder image URL with error handling
+  const getPlaceholderUrl = (width, height) => {
+    // Use an external placeholder service to avoid 406 errors
+    return `https://placehold.co/${width}x${height}`;
+  };
+
+  console.log("Pre-render state check:", { loading, error, profile, isCurrentUser });
+
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
@@ -264,33 +308,47 @@ const UserProfile = () => {
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
-            <span className="ml-2 text-stone-600">Loading...</span>
+            <span className="ml-2 text-stone-600">Loading profile...</span>
           </div>
         </main>
       </div>
     );
   }
-  return (
-    <div className="bg-base min-h-screen">
-      <Header />
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {error && (
+
+  if (error) {
+    return (
+      <div className="bg-base min-h-screen">
+        <Header />
+        <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6 flex items-start">
             <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
-        )}
+          <div className="text-center mt-8">
+            <Link to="/" className="text-forest-700 hover:text-forest-800 underline">
+              Return to Homepage
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-base min-h-screen">
+      <Header />
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Debug info section (can be removed in production) */}
+        <div className="mb-6 p-4 bg-stone-100 border border-stone-200 rounded-md">
+          <h3 className="font-medium text-stone-800 mb-2">Debug Info:</h3>
+          <p>Profile exists: {profile ? 'Yes' : 'No'}</p>
+          <p>isCurrentUser: {isCurrentUser ? 'Yes' : 'No'}</p>
+          <p>User ID: {id || 'Not in URL'}</p>
+        </div>
+
         {isCurrentUser ? (
           <div className="bg-white rounded-lg shadow p-6">
             <h1 className="text-3xl font-serif font-medium mb-6">Your Profile</h1>
-
-            {/* Debug information */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <h3 className="font-medium text-blue-800 mb-2">Debug Info:</h3>
-              <p>User ID: {currentUser?.id || 'Not available'}</p>
-              <p>Email: {currentUser?.email || 'Not available'}</p>
-              <p>Profile Data Available: {profile ? 'Yes' : 'No'}</p>
-            </div>
 
             {/* Profile Information */}
             {profile ? (
@@ -420,6 +478,11 @@ const UserProfile = () => {
                       src={profile.avatar_url}
                       alt="Profile"
                       className="w-24 h-24 rounded-full object-cover"
+                      onError={(e) => {
+                        console.log("Avatar image failed to load");
+                        e.target.onerror = null; // Prevent infinite loop
+                        e.target.src = getPlaceholderUrl(96, 96);
+                      }}
                     />
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-forest-100 flex items-center justify-center">
@@ -482,19 +545,144 @@ const UserProfile = () => {
             )}
           </div>
         ) : (
+          // Other user profile view
           <div className="bg-white rounded-lg shadow p-6">
             <h1 className="text-3xl font-serif font-medium mb-6">
               {profile?.username || 'User'}'s Profile
             </h1>
 
-            {/* Other user profile content */}
             {profile ? (
-              <div>
-                {/* Similar profile display as above but without edit buttons */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-6">
+                  {profile.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Profile"
+                      className="w-24 h-24 rounded-full object-cover"
+                      onError={(e) => {
+                        console.log("Other user avatar failed to load");
+                        e.target.onerror = null;
+                        e.target.src = getPlaceholderUrl(96, 96);
+                      }}
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-forest-100 flex items-center justify-center">
+                      <User className="h-12 w-12 text-forest-700" />
+                    </div>
+                  )}
+
+                  <div>
+                    <h2 className="text-2xl font-medium">{profile.username || 'User'}</h2>
+                    {profile.full_name && <p className="text-stone-600">{profile.full_name}</p>}
+                    
+                    {profile.location && (
+                      <p className="text-stone-500 flex items-center mt-1">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {profile.location}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {profile.bio && (
+                  <div className="mt-6">
+                    <h3 className="font-medium text-lg mb-2">About</h3>
+                    <p className="text-stone-700">{profile.bio}</p>
+                  </div>
+                )}
+
+                {/* Other user's listings */}
+                <div className="pt-6 border-t">
+                  <h3 className="font-medium text-lg mb-4">
+                    {profile.username || 'User'}'s Listings
+                  </h3>
+                  
+                  {userListings && userListings.length > 0 ? (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {userListings.map(listing => (
+                        <div key={listing.id} className="border rounded-md p-4">
+                          <Link to={`/tool/${listing.id}`} className="font-medium hover:text-forest-700">
+                            {listing.name}
+                          </Link>
+                          <p className="text-stone-600">${listing.current_price}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-stone-500">This user hasn't listed any tools yet.</p>
+                  )}
+                </div>
+
+                {/* Contact button for other users */}
+                {currentUser && (
+                  <div className="flex justify-center mt-6">
+                    {showMessageForm ? (
+                      <div className="w-full max-w-md">
+                        <h3 className="font-medium text-lg mb-2">
+                          Send message to {profile.username || 'User'}
+                        </h3>
+                        
+                        <form onSubmit={handleSendMessage}>
+                          <textarea
+                            value={messageText}
+                            onChange={(e) => setMessageText(e.target.value)}
+                            className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700 mb-3"
+                            rows={4}
+                            placeholder="Write your message here..."
+                          ></textarea>
+                          
+                          {messageError && (
+                            <div className="text-red-600 text-sm mb-3">{messageError}</div>
+                          )}
+                          
+                          {messageSent && (
+                            <div className="text-green-600 text-sm mb-3">Message sent successfully!</div>
+                          )}
+                          
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setShowMessageForm(false)}
+                              className="px-4 py-2 border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center"
+                              disabled={sendingMessage}
+                            >
+                              {sendingMessage ? (
+                                <>
+                                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : 'Send Message'}
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowMessageForm(true)}
+                        className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center"
+                      >
+                        <MessageSquare className="h-5 w-5 mr-2" />
+                        Contact {profile.username || 'User'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center py-8">
                 <p className="text-stone-500">This user's profile could not be loaded.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
+                >
+                  Retry
+                </button>
               </div>
             )}
           </div>
@@ -502,5 +690,6 @@ const UserProfile = () => {
       </main>
     </div>
   );
-}
+};
+
 export default UserProfile;
