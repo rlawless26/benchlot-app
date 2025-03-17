@@ -83,30 +83,6 @@ const HelpPage = () => {
           </div>
         </div>
       </main>
-      
-      {/* Footer */}
-      <footer className="bg-stone-900 text-stone-300 py-12 mt-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-white font-serif text-lg mb-4">Benchlot</h3>
-              <p className="text-sm mb-6">
-                The trusted marketplace for tools
-              </p>
-              <p className="text-xs text-stone-400">© 2025 Benchlot. All rights reserved.</p>
-            </div>
-            <div>
-              <h3 className="text-white font-serif text-lg mb-4">Contact</h3>
-              <p className="text-sm mb-2">hello@benchlot.com</p>
-              <p className="text-sm">781-960-3998</p>
-            </div>
-            <div>
-              <h3 className="text-white font-serif text-lg mb-4">Location</h3>
-              <p className="text-sm">Greater Boston Area</p>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
