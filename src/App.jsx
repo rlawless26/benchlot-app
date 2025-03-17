@@ -131,10 +131,10 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<LandingPage2 />} />
       <Route path="/survey" element={<SurveyPage />} />
       <Route path="/product/:id" element={<ProductPage />} />
-      <Route path="/2" element={<LandingPage2 />} />
+      <Route path="/2" element={<LandingPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/tool/:id" element={<ToolDetailPage />} />
       <Route path="/listtool" element={<ToolListingForm />} />
