@@ -157,7 +157,7 @@ const Header = () => {
             </button>
 
             {/* Updated logo link to "/2" */}
-            <Link to="/2" className="text-2xl font-serif text-forest-800">Benchlot</Link>
+            <Link to="/" className="text-2xl font-serif text-forest-800">Benchlot</Link>
 
             {/* Desktop Categories with links to marketplace with filters */}
             <nav className="hidden lg:flex items-center gap-6">
