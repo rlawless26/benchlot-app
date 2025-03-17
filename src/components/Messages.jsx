@@ -15,7 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { supabase, getCurrentUser, fetchMessages, sendMessage, fetchUserOffers, respondToOffer, fetchConversations} from '../supabaseClient';
-import Header from '../header';
+
 
 
 const Messages = () => {
@@ -630,7 +630,7 @@ const Messages = () => {
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+       
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -642,7 +642,7 @@ const Messages = () => {
   
   return (
     <div className="bg-base min-h-screen">
-      <Header />
+     
       
       <div className="max-w-7xl mx-auto py-8 px-4">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">

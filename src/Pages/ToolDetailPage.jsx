@@ -28,8 +28,7 @@ import {
   supabase
 } from '../supabaseClient';
 
-// Import Header component
-import Header from '../header';
+
 import MessageModal from '../components/MessageModal';
 
 const ToolDetailPage = () => {
@@ -419,7 +418,7 @@ const ToolDetailPage = () => {
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+      
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -434,7 +433,7 @@ const ToolDetailPage = () => {
   if (error) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+        
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-6">
             <div className="flex items-start">
@@ -463,7 +462,7 @@ const ToolDetailPage = () => {
   if (!tool) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+        
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-4 rounded-lg mb-6">
             <div className="flex items-start">
@@ -490,7 +489,7 @@ const ToolDetailPage = () => {
   // Main content when tool is loaded successfully
   return (
     <div className="bg-base min-h-screen">
-      <Header />
+     
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb navigation */}

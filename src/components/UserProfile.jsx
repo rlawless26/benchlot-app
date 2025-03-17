@@ -24,8 +24,7 @@ import {
   sendMessage
 } from '../supabaseClient';
 
-// Import Header component
-import Header from '../header';
+
 import ToolListingCard from './ToolListingCard';
 import MessageBanner from './MessageBanner';
 
@@ -263,7 +262,7 @@ const UserProfile = () => {
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -277,7 +276,7 @@ const UserProfile = () => {
   if (error) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+ 
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6 flex items-start">
             <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
@@ -295,7 +294,7 @@ const UserProfile = () => {
 
   return (
     <div className="bg-base min-h-screen">
-      <Header />
+      
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Debug info section (can be removed in production) */}
         <div className="mb-6 p-4 bg-stone-100 border border-stone-200 rounded-md">

@@ -20,8 +20,6 @@ import {
   getCurrentUser
 } from '../supabaseClient';
 
-// Import Header component
-import Header from '../header';
 
 const ToolListingForm = () => {
   const navigate = useNavigate();
@@ -348,7 +346,7 @@ const ToolListingForm = () => {
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+ 
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -361,7 +359,7 @@ const ToolListingForm = () => {
 
   return (
     <div className="bg-base min-h-screen">
-      <Header />
+
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">

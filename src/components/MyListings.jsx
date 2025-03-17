@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import Header from '../header';
 
 const MyListings = () => {
   const [tools, setTools] = useState([]);
@@ -82,7 +81,7 @@ const MyListings = () => {
   if (isLoading) {
     return (
       <>
-        <Header />
+  
         <div className="max-w-7xl mx-auto px-4 py-12">
           <h1 className="text-2xl font-serif mb-6">My Listings</h1>
           <div className="text-center py-12">Loading your listings...</div>
@@ -93,7 +92,7 @@ const MyListings = () => {
 
   return (
     <>
-      <Header />
+   
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-serif">My Listings</h1>

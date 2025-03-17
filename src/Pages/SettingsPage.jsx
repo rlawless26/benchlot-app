@@ -25,8 +25,7 @@ import {
     updateUserPreferences
 } from '../supabaseClient';
 
-// Import Header component
-import Header from '../header';
+
 
 const SettingsPage = () => {
     const navigate = useNavigate();
@@ -752,7 +751,7 @@ const SettingsPage = () => {
     if (loading) {
         return (
             <div className="bg-base min-h-screen">
-                <Header />
+            
                 <div className="max-w-7xl mx-auto px-4 py-8">
                     <div className="flex justify-center items-center h-64">
                         <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -765,7 +764,7 @@ const SettingsPage = () => {
 
     return (
         <div className="bg-base min-h-screen">
-            <Header />
+           
 
             <main className="max-w-7xl mx-auto px-4 py-8">
                 <h1 className="text-3xl font-serif font-medium text-stone-800 mb-6">Account Settings</h1>

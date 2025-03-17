@@ -13,8 +13,7 @@ import {
   Loader
 } from 'lucide-react';
 
-// Import components
-import Header from '../header';
+
 import ToolListingCard from '../components/ToolListingCard';
 
 // Import Supabase functions
@@ -223,7 +222,7 @@ const MarketplacePage = () => {
   
   return (
     <div className="bg-base min-h-screen">
-      <Header />
+   
       
       {/* Page content */}
       <main className="max-w-7xl mx-auto px-4 py-8">

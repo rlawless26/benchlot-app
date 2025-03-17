@@ -1,11 +1,11 @@
 import React from 'react';
 import { Phone, Mail, HelpCircle } from 'lucide-react';
-import Header from '../header';
+
 
 const HelpPage = () => {
   return (
     <div className="bg-base min-h-screen">
-      <Header />
+
       
       <main className="max-w-7xl mx-auto px-4 py-12">
         {/* Main heading */}

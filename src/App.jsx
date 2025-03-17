@@ -3,11 +3,16 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
+// Import Layout component
+import Layout from './components/Layout';
+
+// Pages and components
 import LandingPage from './Pages/benchlot-component.jsx';
 import SurveyPage from './Pages/SurveyComponent.jsx';
 import ProductPage from './Pages/ProductPage.jsx';
 import LandingPage2 from './Pages/LandingPage.jsx';
 import MarketplacePage from './Pages/MarketplacePage';
+import CategoriesPage from './Pages/CategoriesPage';
 import ToolDetailPage from './Pages/ToolDetailPage';
 import ToolListingForm from './components/ToolListingForm';
 import UserProfile from './components/UserProfile';
@@ -131,36 +136,43 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage2 />} />
+      {/* Routes that use the Layout (Header + Footer) */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<LandingPage2 />} />
+        <Route path="/marketplace" element={<MarketplacePage />} />
+        <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/tool/:id" element={<ToolDetailPage />} />
+        <Route path="/listtool" element={<ToolListingForm />} />
+        <Route path="/profile" element={<UserProfile />} />
+        <Route path="/profile/:id" element={<UserProfile />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route
+          path="/wishlist"
+          element={<ProtectedRoute element={<Wishlist />} />}
+        />
+        <Route
+          path="/my-listings"
+          element={<ProtectedRoute element={<MyListings />} />}
+        />
+        <Route
+          path="/settings"
+          element={<ProtectedRoute element={<SettingsPage />} />}
+        />
+        <Route
+          path="/messages"
+          element={<ProtectedRoute element={<Messages />} />}
+        />
+      </Route>
+
+      {/* Routes that don't use the global Layout */}
       <Route path="/survey" element={<SurveyPage />} />
       <Route path="/product/:id" element={<ProductPage />} />
       <Route path="/2" element={<LandingPage />} />
-      <Route path="/marketplace" element={<MarketplacePage />} />
-      <Route path="/tool/:id" element={<ToolDetailPage />} />
-      <Route path="/listtool" element={<ToolListingForm />} />
-      <Route path="/profile" element={<UserProfile />} />
-      <Route path="/profile/:id" element={<UserProfile />} />
-      <Route path="/login" element={<AuthPage mode="login" />} />
-      <Route path="/signup" element={<AuthPage mode="signup" />} />
-      <Route path="/about" element={<AboutPage />} />
-      <Route path="/help" element={<HelpPage />} />
-      <Route
-        path="/wishlist"
-        element={<ProtectedRoute element={<Wishlist />} />}
-      />
-      <Route
-        path="/my-listings"
-        element={<ProtectedRoute element={<MyListings />} />}
-      />
-      <Route
-        path="/settings"
-        element={<ProtectedRoute element={<SettingsPage />} />}
-      />
-      <Route
-        path="/messages"
-        element={<ProtectedRoute element={<Messages />} />}
-      />
-
+     
+      
       {/* Admin Routes */}
       <Route
         path="/admin"

@@ -18,8 +18,6 @@ import {
   supabase
 } from '../supabaseClient';
 
-// Import Header component
-import Header from '../header';
 
 const AuthPage = ({ mode = 'login' }) => {
   const navigate = useNavigate();
@@ -118,7 +116,7 @@ const AuthPage = ({ mode = 'login' }) => {
   
   return (
     <div className="bg-base min-h-screen">
-      <Header />
+
       
       <main className="max-w-md mx-auto px-4 py-12">
         <div className="bg-white rounded-lg shadow-md p-8">

@@ -1,13 +1,12 @@
 import React from 'react';
 import { Wrench, Hammer, Home, ShoppingBag, Users, Calendar } from 'lucide-react';
-import Header from '../header'; 
 import founderImage from '../assets/Lawless Picture.jpg';
 
 const AboutPage = () => {
   return (
     <div className="bg-base min-h-screen">
-      <Header />
-      
+     
+  
       <main className="max-w-5xl mx-auto px-4 py-12">
         {/* Hero Section */}
         <div className="mb-16 text-center">

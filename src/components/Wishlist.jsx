@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Loader, AlertCircle, ShoppingBag } from 'lucide-react';
 import { fetchWishlist, removeFromWishlist, getCurrentUser } from '../supabaseClient';
-import Header from '../header';
 import { Skeleton } from './ui/loading-skeleton';
 import WishlistToolCard from './WishlistToolCard';
 
@@ -79,7 +78,7 @@ const Wishlist = () => {
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-        <Header />
+      
         <main className="max-w-7xl mx-auto px-4 py-8">
           <h1 className="text-2xl font-serif mb-6">Saved Tools</h1>
           
@@ -105,7 +104,6 @@ const Wishlist = () => {
 
   return (
     <div className="bg-base min-h-screen">
-      <Header />
       
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
