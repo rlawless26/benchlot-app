@@ -1,13 +1,13 @@
 // src/supabaseClient.js
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-// Keep your existing supabase client initialization
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
+// Initialize Supabase client
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Auth helper functions (if you don't have them already)
+// Auth helper functions
 export const signUp = async (email, password, userData) => {
   // Step 1: Sign up with email and password
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -45,6 +45,14 @@ export const signIn = async (email, password) => {
 
 export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
+  return { error };
+};
+
+export const updateUserPassword = async (newPassword) => {
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword
+  });
+  
   return { error };
 };
 
@@ -311,128 +319,6 @@ export const uploadToolImage = async (file, toolId) => {
   return { data: { ...updatedTool, signedUrl }, error: updateError };
 };
 
-// Wishlist functions
-export const addToWishlist = async (toolId) => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { error: { message: 'You must be logged in to save tools' } };
-  
-  const { data, error } = await supabase
-    .from('wishlist')
-    .insert({
-      user_id: user.id,
-      tool_id: toolId,
-    })
-    .select();
-  
-  return { data, error };
-};
-
-export const removeFromWishlist = async (toolId) => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { error: { message: 'You must be logged in to remove saved tools' } };
-  
-  const { data, error } = await supabase
-    .from('wishlist')
-    .delete()
-    .eq('user_id', user.id)
-    .eq('tool_id', toolId);
-  
-  return { data, error };
-};
-
-export const fetchWishlist = async () => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { error: { message: 'You must be logged in to view your wishlist' } };
-  
-  const { data, error } = await supabase
-    .from('wishlist')
-    .select(`
-      tool_id,
-      tool:tool_id (
-        *,
-        seller:seller_id (id, username, full_name, avatar_url, rating)
-      )
-    `)
-    .eq('user_id', user.id);
-  
-  return { data: data?.map(item => item.tool), error };
-};
-
-export const isToolInWishlist = async (toolId) => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { data: false };
-  
-  const { data, error } = await supabase
-    .from('wishlist')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('tool_id', toolId)
-    .single();
-  
-  return { data: !!data, error };
-};
-
-// User profile functions
-export const updateUserProfile = async (profileData) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    return { error: { message: 'You must be logged in to update your profile' } };
-  }
-  
-  const { data, error } = await supabase
-    .from('users')
-    .update(profileData)
-    .eq('id', user.id)
-    .select();
-  
-  return { data, error };
-};
-
-export const uploadProfileImage = async (file) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
-    return { error: { message: 'You must be logged in to upload a profile image' } };
-  }
-  
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${user.id}.${fileExt}`;
-  const filePath = `avatars/${fileName}`;
-  
-  // Upload the file
-  const { data, error } = await supabase.storage
-    .from('user-images')
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: true
-    });
-  
-  if (error) {
-    console.error("Storage upload error:", error);
-    return { error };
-  }
-  
-  // Get a signed URL with a long expiration (e.g., 30 days for profile images)
-  const { data: signedUrlData } = await supabase.storage
-    .from('user-images')
-    .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 days expiration
-  
-  const signedUrl = signedUrlData.signedUrl;
-  console.log("Generated signed URL for profile image:", signedUrl);
-  
-  // Update the user profile
-  const { data: updatedProfile, error: updateError } = await supabase
-    .from('users')
-    .update({
-      avatar_url: signedUrl,
-    })
-    .eq('id', user.id)
-    .select();
-  
-  return { data: { ...updatedProfile, signedUrl }, error: updateError };
-};
-
 export const removeToolImage = async (toolId, imageUrl) => {
   const { data: user } = await getCurrentUser();
   if (!user) return { error: { message: 'You must be logged in to remove images' } };
@@ -482,57 +368,138 @@ export const removeToolImage = async (toolId, imageUrl) => {
   return { data, error };
 };
 
-// Update user password
-export const updateUserPassword = async (currentPassword, newPassword) => {
-  try {
-    // First verify the current password is correct by attempting to sign in
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData || !userData.user) {
-      return { error: { message: 'No user is currently logged in' } };
-    }
-    
-    // Try signing in with current password to verify it
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: userData.user.email,
-      password: currentPassword,
-    });
-    
-    if (signInError) {
-      return { error: { message: 'Current password is incorrect' } };
-    }
-    
-    // If current password verification is successful, update to new password
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
-    
-    return { error };
-  } catch (error) {
-    console.error('Error updating password:', error);
-    return { error };
-  }
+// Wishlist functions
+export const addToWishlist = async (toolId) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to save tools' } };
+  
+  const { data, error } = await supabase
+    .from('wishlist')
+    .insert({
+      user_id: user.id,
+      tool_id: toolId,
+    })
+    .select();
+  
+  return { data, error };
 };
 
-// Update user preferences (notifications, privacy, shipping)
-export const updateUserPreferences = async (preferencesData) => {
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    
-    if (!userData || !userData.user) {
-      return { error: { message: 'You must be logged in to update preferences' } };
-    }
-    
-    const { data, error } = await supabase
-      .from('users')
-      .update(preferencesData)
-      .eq('id', userData.user.id)
-      .select();
-    
-    return { data, error };
-  } catch (error) {
-    console.error('Error updating user preferences:', error);
+export const removeFromWishlist = async (toolId) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to remove saved tools' } };
+  
+  
+  const { data, error } = await supabase
+    .from('wishlist')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('tool_id', toolId);
+  
+  return { data, error };
+};
+
+export const updateUserPreferences = async (preferences) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to update preferences' } };
+  
+  const { data, error } = await supabase
+    .from('users')
+    .update({
+      preferences: preferences
+    })
+    .eq('id', user.id)
+    .select('preferences')
+    .single();
+  
+  return { data, error };
+};
+
+export const fetchWishlist = async () => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to view your wishlist' } };
+  
+  const { data, error } = await supabase
+    .from('wishlist')
+    .select(`
+      tool_id,
+      tool:tool_id (
+        *,
+        seller:seller_id (id, username, full_name, avatar_url, rating)
+      )
+    `)
+    .eq('user_id', user.id);
+  
+  return { data: data?.map(item => item.tool), error };
+};
+
+export const isToolInWishlist = async (toolId) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { data: false };
+  
+  const { data, error } = await supabase
+    .from('wishlist')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('tool_id', toolId)
+    .single();
+  
+  return { data: !!data, error };
+};
+
+// User profile functions
+export const updateUserProfile = async (profileData) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to update your profile' } };
+  
+  const { data, error } = await supabase
+    .from('users')
+    .update(profileData)
+    .eq('id', user.id)
+    .select()
+    .single();
+  
+  return { data, error };
+};
+
+export const uploadProfileImage = async (file) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to upload a profile image' } };
+  
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${user.id}.${fileExt}`;
+  const filePath = `avatars/${fileName}`;
+  
+  // Upload the file
+  const { data, error } = await supabase.storage
+    .from('user-images')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true
+    });
+  
+  if (error) {
+    console.error("Storage upload error:", error);
     return { error };
   }
+  
+  // Get a signed URL with a long expiration (e.g., 30 days for profile images)
+  const { data: signedUrlData } = await supabase.storage
+    .from('user-images')
+    .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30 days expiration
+  
+  const signedUrl = signedUrlData.signedUrl;
+  console.log("Generated signed URL for profile image:", signedUrl);
+  
+  // Update the user profile
+  const { data: updatedProfile, error: updateError } = await supabase
+    .from('users')
+    .update({
+      avatar_url: signedUrl,
+    })
+    .eq('id', user.id)
+    .select();
+  
+  return { data: { ...updatedProfile, signedUrl }, error: updateError };
 };
 
 // Get user's listings
@@ -603,19 +570,6 @@ export const sendMessage = async (recipientId, content, toolId = null) => {
   
   return { data, error };
 };
-// Get unread message count for the current user
-export const getUnreadMessageCount = async () => {
-  const { data: user } = await getCurrentUser();
-  if (!user) return { data: 0, error: null };
-  
-  const { count, error } = await supabase
-    .from('messages')
-    .select('*', { count: 'exact', head: true })
-    .eq('recipient_id', user.id)
-    .eq('is_read', false);
-  
-  return { data: count || 0, error };
-};
 
 export const fetchConversations = async () => {
   const { data: user } = await getCurrentUser();
@@ -636,7 +590,6 @@ export const fetchConversations = async () => {
     `)
     .eq('sender_id', user.id)
     .order('created_at', { ascending: false });
-    
   
   const { data: receivedMessages, error: receivedError } = await supabase
     .from('messages')
@@ -682,6 +635,19 @@ export const fetchConversations = async () => {
   return { data: conversations, error: null };
 };
 
+export const getUnreadMessageCount = async () => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { count: 0, error: null };
+  
+  const { count, error } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('recipient_id', user.id)
+    .eq('is_read', false);
+  
+  return { count: count || 0, error };
+}; 
+
 export const fetchMessages = async (otherUserId) => {
   const { data: user } = await getCurrentUser();
   if (!user) return { error: { message: 'You must be logged in to view messages' } };
@@ -721,4 +687,198 @@ export const joinWaitlist = async (email) => {
     ]);
 
   return { data, error };
+};
+
+// Offer Functions
+export const createOffer = async (toolId, amount, message = '') => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to make offers' } };
+  
+  // Get tool information including seller ID
+  const { data: tool, error: toolError } = await fetchToolById(toolId);
+  if (toolError) return { error: toolError };
+  
+  try {
+    // Create a new message first
+    const messageContent = `I'm interested in your ${tool.name}. Would you consider ${amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}?${message ? ' ' + message : ''}`;
+    
+    const { data: messageData, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: user.id,
+        recipient_id: tool.seller_id,
+        tool_id: toolId,
+        content: messageContent,
+        message_type: 'offer'
+      })
+      .select();
+    
+    if (messageError) throw messageError;
+    
+    // Create the offer record
+    const { data: offerData, error: offerError } = await supabase
+      .from('offers')
+      .insert({
+        tool_id: toolId,
+        buyer_id: user.id,
+        seller_id: tool.seller_id,
+        amount: amount,
+        message_id: messageData[0].id
+      })
+      .select();
+    
+    if (offerError) throw offerError;
+    
+    // Update the message with the offer_id
+    await supabase
+      .from('messages')
+      .update({
+        offer_id: offerData[0].id
+      })
+      .eq('id', messageData[0].id);
+    
+    return { data: offerData[0], error: null };
+    
+  } catch (err) {
+    console.error('Error creating offer:', err);
+    return { error: err };
+  }
+};
+
+export const fetchOffersByTool = async (toolId) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to view offers' } };
+  
+  // Get tool to check ownership
+  const { data: tool, error: toolError } = await fetchToolById(toolId);
+  if (toolError) return { error: toolError };
+  
+  // Only the seller should see all offers for their tool
+  if (tool.seller_id !== user.id) {
+    // For buyers, only show their own offers
+    const { data, error } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        buyer:buyer_id (id, username, full_name, avatar_url),
+        seller:seller_id (id, username, full_name, avatar_url),
+        tool:tool_id (id, name, current_price, images)
+      `)
+      .eq('tool_id', toolId)
+      .eq('buyer_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    return { data, error };
+  } else {
+    // For sellers, show all offers for this tool
+    const { data, error } = await supabase
+      .from('offers')
+      .select(`
+        *,
+        buyer:buyer_id (id, username, full_name, avatar_url),
+        seller:seller_id (id, username, full_name, avatar_url),
+        tool:tool_id (id, name, current_price, images)
+      `)
+      .eq('tool_id', toolId)
+      .order('created_at', { ascending: false });
+    
+    return { data, error };
+  }
+};
+
+export const fetchUserOffers = async (status = null) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to view offers' } };
+  
+  let query = supabase
+    .from('offers')
+    .select(`
+      *,
+      buyer:buyer_id (id, username, full_name, avatar_url),
+      seller:seller_id (id, username, full_name, avatar_url),
+      tool:tool_id (id, name, current_price, images)
+    `)
+    .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+    .order('created_at', { ascending: false });
+  
+  if (status) {
+    query = query.eq('status', status);
+  }
+  
+  const { data, error } = await query;
+  
+  return { data, error };
+};
+
+export const respondToOffer = async (offerId, action, counterAmount = null) => {
+  const { data: user } = await getCurrentUser();
+  if (!user) return { error: { message: 'You must be logged in to respond to offers' } };
+  
+  // Get offer details
+  const { data: offer, error: offerError } = await supabase
+    .from('offers')
+    .select(`
+      *,
+      tool:tool_id (name)
+    `)
+    .eq('id', offerId)
+    .single();
+  
+  if (offerError) return { error: offerError };
+  
+  // Verify that the current user is the seller
+  if (offer.seller_id !== user.id) {
+    return { error: { message: 'Only the seller can respond to an offer' } };
+  }
+  
+  try {
+    let messageContent = '';
+    let updateData = {};
+    
+    // Prepare update data and message content based on action
+    if (action === 'accept') {
+      updateData = { status: 'accepted' };
+      messageContent = `I've accepted your offer of ${offer.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} for my ${offer.tool.name}.`;
+    } else if (action === 'reject') {
+      updateData = { status: 'rejected' };
+      messageContent = `I've declined your offer of ${offer.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} for my ${offer.tool.name}.`;
+    } else if (action === 'counter' && counterAmount) {
+      updateData = { 
+        status: 'countered',
+        counter_amount: counterAmount
+      };
+      messageContent = `I'm countering your offer with ${counterAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} for my ${offer.tool.name}.`;
+    } else {
+      return { error: { message: 'Invalid action or missing counter amount' } };
+    }
+    
+    // Update the offer
+    const { data, error } = await supabase
+      .from('offers')
+      .update(updateData)
+      .eq('id', offerId)
+      .select();
+    
+    if (error) throw error;
+    
+    // Create a response message
+    const { error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: user.id,
+        recipient_id: offer.buyer_id,
+        tool_id: offer.tool_id,
+        content: messageContent,
+        message_type: 'offer_response',
+        offer_id: offerId
+      });
+    
+    if (messageError) throw messageError;
+    
+    return { data: data[0], error: null };
+    
+  } catch (err) {
+    console.error('Error responding to offer:', err);
+    return { error: err };
+  }
 };

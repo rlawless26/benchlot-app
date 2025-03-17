@@ -11,7 +11,10 @@ import {
   ChevronRight,
   ArrowLeft,
   Loader,
-  AlertCircle
+  AlertCircle,
+  ShoppingCart,
+  DollarSign,
+  X
 } from 'lucide-react';
 
 // Import Supabase client and helpers
@@ -21,7 +24,8 @@ import {
   addToWishlist,
   removeFromWishlist,
   isToolInWishlist,
-  getCurrentUser
+  getCurrentUser,
+  supabase
 } from '../supabaseClient';
 
 // Import Header component
@@ -41,8 +45,11 @@ const ToolDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
-
-  // Add this function before the return statement in ToolDetailPage.jsx
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerAmount, setOfferAmount] = useState('');
+  const [offerMessage, setOfferMessage] = useState('');
+  const [submittingOffer, setSubmittingOffer] = useState(false);
+  const [offerError, setOfferError] = useState(null);
 
   // Handle sharing the tool
   const handleShare = async () => {
@@ -227,6 +234,185 @@ const ToolDetailPage = () => {
     }
 
     setShowMessageModal(true);
+  };
+
+  // Function to handle offer submission
+  const submitOffer = async () => {
+    if (!user) {
+      navigate('/login', { state: { from: `/tool/${id}` } });
+      return;
+    }
+
+    if (!offerAmount || parseFloat(offerAmount) <= 0) {
+      setOfferError('Please enter a valid offer amount');
+      return;
+    }
+
+    setSubmittingOffer(true);
+    setOfferError(null);
+
+    try {
+      // Create a new message first
+      const messageContent = `I'm interested in your ${tool.name}. Would you consider ${formatPrice(parseFloat(offerAmount))}?${offerMessage ? ' ' + offerMessage : ''}`;
+
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          recipient_id: tool.seller_id,
+          tool_id: tool.id,
+          content: messageContent,
+          message_type: 'offer'
+        })
+        .select()
+        .single();
+
+      if (messageError) throw messageError;
+
+      // Create the offer record
+      const { data: offerData, error: offerError } = await supabase
+        .from('offers')
+        .insert({
+          tool_id: tool.id,
+          buyer_id: user.id,
+          seller_id: tool.seller_id,
+          amount: parseFloat(offerAmount),
+          message_id: messageData.id
+        })
+        .select()
+        .single();
+
+      if (offerError) throw offerError;
+
+      // Update the message with the offer_id
+      await supabase
+        .from('messages')
+        .update({
+          offer_id: offerData.id
+        })
+        .eq('id', messageData.id);
+
+      // Close the modal and show success
+      setShowOfferModal(false);
+      alert('Your offer has been sent!');
+
+      // Navigate to messages with this seller
+      navigate('/messages', { state: { recipient: tool.seller_id, toolId: tool.id } });
+
+    } catch (err) {
+      console.error('Error submitting offer:', err);
+      setOfferError('Failed to submit offer. Please try again.');
+    } finally {
+      setSubmittingOffer(false);
+    }
+  };
+
+  // Render the offer modal
+  const renderOfferModal = () => {
+    if (!showOfferModal) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Modal overlay */}
+        <div
+          className="absolute inset-0 bg-black bg-opacity-50"
+          onClick={() => setShowOfferModal(false)}
+        ></div>
+
+        {/* Modal content */}
+        <div className="relative w-full max-w-md px-4 py-6 bg-white rounded-lg shadow-lg z-10">
+          {/* Close button */}
+          <button
+            className="absolute top-3 right-3 text-stone-400 hover:text-stone-600"
+            onClick={() => setShowOfferModal(false)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          <h2 className="text-xl font-medium text-stone-800 mb-4">Make an Offer</h2>
+
+          {/* Tool info */}
+          <div className="flex items-center mb-6">
+            <div className="w-16 h-16 bg-stone-100 rounded overflow-hidden">
+              <img
+                src={tool.images?.[0] || '/api/placeholder/80/80'}
+                alt={tool.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="ml-3 overflow-hidden">
+              <h3 className="font-medium text-stone-800 truncate">{tool.name}</h3>
+              <p className="text-stone-600">{formatPrice(tool.current_price)}</p>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={(e) => { e.preventDefault(); submitOffer(); }}>
+            {/* Offer amount */}
+            <div className="mb-4">
+              <label className="block text-stone-700 font-medium mb-1">
+                Your Offer
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-stone-500">$</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={offerAmount}
+                  onChange={(e) => setOfferAmount(e.target.value)}
+                  className="w-full pl-8 pr-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+                  placeholder="Enter amount"
+                  required
+                />
+              </div>
+              {tool.current_price && (
+                <p className="text-xs text-stone-500 mt-1">
+                  Asking price: {formatPrice(tool.current_price)}
+                </p>
+              )}
+            </div>
+
+            {/* Optional message */}
+            <div className="mb-4">
+              <label className="block text-stone-700 font-medium mb-1">
+                Add a Message (Optional)
+              </label>
+              <textarea
+                value={offerMessage}
+                onChange={(e) => setOfferMessage(e.target.value)}
+                className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+                placeholder="Tell the seller why you're making this offer..."
+                rows={3}
+              ></textarea>
+            </div>
+
+            {/* Error message */}
+            {offerError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md mb-4">
+                {offerError}
+              </div>
+            )}
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center justify-center font-medium"
+              disabled={submittingOffer}
+            >
+              {submittingOffer ? (
+                <>
+                  <Loader className="h-4 w-4 mr-2 animate-spin" />
+                  Sending Offer...
+                </>
+              ) : (
+                'Send Offer'
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   };
 
   // If loading, show loading state
@@ -487,8 +673,28 @@ const ToolDetailPage = () => {
 
               {/* Action buttons */}
               <div className="grid grid-cols-1 gap-3 mb-6">
+                {/* Buy It Now button */}
                 <button
                   className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center justify-center font-medium"
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  Buy It Now
+                </button>
+
+                {/* Make Offer button - only shown if seller allows offers */}
+                {tool.allow_offers && (
+                  <button
+                    className="w-full py-3 bg-white border border-forest-300 text-forest-700 rounded-md hover:bg-forest-50 flex items-center justify-center font-medium"
+                    onClick={() => setShowOfferModal(true)}
+                  >
+                    <DollarSign className="h-5 w-5 mr-2" />
+                    Make Offer
+                  </button>
+                )}
+
+                {/* Contact Seller button */}
+                <button
+                  className="w-full py-3 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 flex items-center justify-center font-medium"
                   onClick={contactSeller}
                 >
                   <MessageSquare className="h-5 w-5 mr-2" />
@@ -502,6 +708,7 @@ const ToolDetailPage = () => {
                   <Heart className={`h-5 w-5 mr-2 ${inWishlist ? 'fill-forest-700' : ''}`} />
                   {inWishlist ? 'Saved to Wishlist' : 'Save to Wishlist'}
                 </button>
+
                 <button
                   className="w-full py-3 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 flex items-center justify-center font-medium"
                   onClick={handleShare}
@@ -618,6 +825,9 @@ const ToolDetailPage = () => {
           toolName={tool.name}
         />
       )}
+
+      {/* Offer Modal */}
+      {renderOfferModal()}
     </div>
   );
 };
