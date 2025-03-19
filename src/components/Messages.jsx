@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  Loader, 
-  MessageSquare, 
-  Send, 
-  User, 
+import {
+  Search,
+  Loader,
+  MessageSquare,
+  Send,
+  User,
   ChevronLeft,
   X,
-  DollarSign, 
-  CheckCircle, 
-  XCircle, 
+  DollarSign,
+  CheckCircle,
+  XCircle,
   ArrowRightCircle,
   AlertCircle
 } from 'lucide-react';
-import { supabase, getCurrentUser, fetchMessages, sendMessage, fetchUserOffers, respondToOffer, fetchConversations} from '../supabaseClient';
+import { supabase, getCurrentUser, fetchMessages, sendMessage, fetchUserOffers, respondToOffer, fetchConversations } from '../supabaseClient';
 
 
 
@@ -26,7 +26,7 @@ const Messages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // State for message thread
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -34,36 +34,36 @@ const Messages = () => {
   const [threadError, setThreadError] = useState(null);
   const [offers, setOffers] = useState([]);
   const messagesEndRef = useRef(null);
-  
+
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Functions to format dates/times
   const formatLastMessageTime = (timestamp) => {
     if (!timestamp) return '';
-    
+
     const date = new Date(timestamp);
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
-    
+
     if (isToday) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else {
       return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     }
   };
-  
+
   const formatMessageTime = (timestamp) => {
     if (!timestamp) return '';
-    
+
     const date = new Date(timestamp);
     const now = new Date();
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const isToday = date.toDateString() === now.toDateString();
     const isYesterday = date.toDateString() === yesterday.toDateString();
-    
+
     if (isToday) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else if (isYesterday) {
@@ -72,7 +72,7 @@ const Messages = () => {
       return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
   };
-  
+
   // Format price with $ and commas
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-US', {
@@ -82,43 +82,43 @@ const Messages = () => {
       maximumFractionDigits: 2
     }).format(price);
   };
-  
+
   // Load the current user and conversations
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         // Get current user
         const { data: userData, error: userError } = await getCurrentUser();
-        
+
         if (userError) {
           // Redirect to login if not logged in
           navigate('/login', { state: { from: '/messages' } });
           return;
         }
-        
+
         if (!userData) {
           throw new Error('Failed to load user data');
         }
-        
+
         setCurrentUser(userData);
-        
+
         // Get conversations
         const { data: conversationsData, error: convError } = await fetchConversations();
-        
+
         if (convError) throw convError;
-        
+
         setConversations(conversationsData || []);
-        
+
         // Check if a specific conversation was requested (from location state)
         if (location.state && location.state.recipient) {
           const requestedUserId = location.state.recipient;
           const existingConversation = conversationsData.find(
             conv => conv.other_user.id === requestedUserId
           );
-          
+
           if (existingConversation) {
             setSelectedConversation(existingConversation);
           } else {
@@ -128,7 +128,7 @@ const Messages = () => {
               .select('*')
               .eq('id', requestedUserId)
               .single();
-              
+
             if (otherUserData) {
               const newConversation = {
                 id: null, // No actual conversation record yet
@@ -137,7 +137,7 @@ const Messages = () => {
                 content: '',
                 created_at: null
               };
-              
+
               setSelectedConversation(newConversation);
             }
           }
@@ -152,55 +152,55 @@ const Messages = () => {
         setLoading(false);
       }
     };
-    
+
     loadData();
   }, [navigate, location]);
-  
+
   // Load messages and offers when a conversation is selected
   useEffect(() => {
     if (!currentUser || !selectedConversation || !selectedConversation.other_user) return;
-    
+
     const loadMessages = async () => {
       setThreadError(null);
-      
+
       try {
         // Fetch messages
         const { data: messagesData, error: messagesError } = await fetchMessages(selectedConversation.other_user.id);
         if (messagesError) throw messagesError;
-        
+
         setMessages(messagesData || []);
-        
+
         // Fetch offers related to this conversation
         const { data: offersData, error: offersError } = await fetchUserOffers();
         if (offersError) throw offersError;
-        
+
         // Filter offers between these users
-        const relevantOffers = offersData.filter(offer => 
+        const relevantOffers = offersData.filter(offer =>
           (offer.buyer_id === currentUser.id && offer.seller_id === selectedConversation.other_user.id) ||
           (offer.buyer_id === selectedConversation.other_user.id && offer.seller_id === currentUser.id)
         );
-        
+
         setOffers(relevantOffers || []);
-        
+
         // Mark messages as read
         await supabase
           .from('messages')
           .update({ is_read: true })
           .eq('sender_id', selectedConversation.other_user.id)
           .eq('recipient_id', currentUser.id);
-          
+
       } catch (err) {
         console.error('Error loading messages:', err);
         setThreadError('Failed to load messages. Please try again.');
       }
     };
-    
+
     loadMessages();
-    
+
     // Set up real-time subscription for new messages
     const messagesSubscription = supabase
       .channel('messages-channel')
-      .on('postgres_changes', { 
+      .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
@@ -209,7 +209,7 @@ const Messages = () => {
         // Add the new message to state if it's from this conversation
         if (payload.new.sender_id === selectedConversation.other_user.id) {
           setMessages(prev => [...prev, payload.new]);
-          
+
           // Mark the message as read
           supabase
             .from('messages')
@@ -218,7 +218,7 @@ const Messages = () => {
         }
       })
       .subscribe();
-      
+
     // Set up subscription for offer updates
     const offersSubscription = supabase
       .channel('offers-channel')
@@ -229,12 +229,12 @@ const Messages = () => {
       }, async (payload) => {
         // Reload offers if this is relevant to the current conversation
         if (
-          (payload.new.buyer_id === currentUser.id && payload.new.seller_id === selectedConversation.other_user.id) || 
+          (payload.new.buyer_id === currentUser.id && payload.new.seller_id === selectedConversation.other_user.id) ||
           (payload.new.buyer_id === selectedConversation.other_user.id && payload.new.seller_id === currentUser.id)
         ) {
           const { data } = await fetchUserOffers();
           if (data) {
-            const relevantOffers = data.filter(offer => 
+            const relevantOffers = data.filter(offer =>
               (offer.buyer_id === currentUser.id && offer.seller_id === selectedConversation.other_user.id) ||
               (offer.buyer_id === selectedConversation.other_user.id && offer.seller_id === currentUser.id)
             );
@@ -243,82 +243,116 @@ const Messages = () => {
         }
       })
       .subscribe();
-      
+
     return () => {
       supabase.removeChannel(messagesSubscription);
       supabase.removeChannel(offersSubscription);
     };
   }, [currentUser, selectedConversation]);
-  
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-  
+
   // Filter conversations by search term
   const filteredConversations = conversations.filter(conv => {
     const username = conv.other_user.username || '';
     const fullName = conv.other_user.full_name || '';
     const term = searchTerm.toLowerCase();
-    
-    return username.toLowerCase().includes(term) || 
-           fullName.toLowerCase().includes(term);
+
+    return username.toLowerCase().includes(term) ||
+      fullName.toLowerCase().includes(term);
   });
-  
-  // Handle sending a new message
+
+  // Update this function in your Messages.jsx component
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    
+
     if (!newMessage.trim()) return;
-    
+
     setSending(true);
     setThreadError(null);
-    
+
     try {
-      const { error } = await sendMessage(
-        selectedConversation.other_user.id, 
-        newMessage,
+      // First, create a pending message object to display immediately
+      const tempMessage = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        sender_id: currentUser.id,
+        recipient_id: selectedConversation.other_user.id,
+        content: newMessage,
+        created_at: new Date().toISOString(),
+        is_read: false,
+        message_type: 'text',
+        tool_id: selectedConversation.tool_id || null,
+      };
+
+      // Add this message to the local state immediately
+      setMessages(prevMessages => [...prevMessages, tempMessage]);
+
+      // Clear the input field right away
+      setNewMessage('');
+
+      // Then send the message to the server
+      const { data, error } = await sendMessage(
+        selectedConversation.other_user.id,
+        tempMessage.content,
         selectedConversation.tool_id
       );
-      
+
       if (error) throw error;
-      
-      setNewMessage('');
+
+      // If successful and we got data back, replace the temp message with the real one
+      if (data) {
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.id === tempMessage.id ? data : msg
+          )
+        );
+      }
     } catch (err) {
       console.error('Error sending message:', err);
       setThreadError('Failed to send message. Please try again.');
+
+      // Revert the optimistic update
+      setMessages(prevMessages =>
+        prevMessages.filter(msg => msg.id !== `temp-${Date.now()}`)
+      );
+
+      // Restore the message in the input fields
+      setNewMessage(newMessage);
     } finally {
       setSending(false);
     }
   };
-  
+
   // Handle selecting a conversation
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
-    
+
     // On mobile, add a class to show the conversation and hide the sidebar
     if (window.innerWidth < 768) {
       document.querySelector('.conversation-list').classList.add('hidden');
       document.querySelector('.conversation-view').classList.remove('hidden');
     }
   };
-  
+
   // Handle back button on mobile
   const handleBackToList = () => {
     document.querySelector('.conversation-list').classList.remove('hidden');
     document.querySelector('.conversation-view').classList.add('hidden');
   };
-  
+
   // Handle offer response (accept, reject, counter)
   const handleOfferResponse = async (offerId, action, counterAmount = null) => {
     setThreadError(null);
-    
+
     try {
       const { data, error } = await respondToOffer(offerId, action, counterAmount);
       if (error) throw error;
-      
+
       // Update the offer in the state
-      setOffers(prev => 
+      setOffers(prev =>
         prev.map(offer => offer.id === offerId ? data : offer)
       );
     } catch (err) {
@@ -326,31 +360,29 @@ const Messages = () => {
       setThreadError('Failed to respond to offer. Please try again.');
     }
   };
-  
+
   // Component to render a regular message
   const RegularMessage = ({ message, isSender }) => (
     <div className={`flex mb-4 ${isSender ? 'justify-end' : 'justify-start'}`}>
-      <div 
-        className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-4 py-2 ${
-          isSender 
-            ? 'bg-forest-700 text-white rounded-br-none' 
+      <div
+        className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg px-4 py-2 ${isSender
+            ? 'bg-forest-700 text-white rounded-br-none'
             : 'bg-stone-100 text-stone-800 rounded-bl-none'
-        }`}
+          }`}
       >
         <div className="text-sm">
           {message.content}
         </div>
-        <div 
-          className={`text-xs mt-1 text-right ${
-            isSender ? 'text-forest-200' : 'text-stone-500'
-          }`}
+        <div
+          className={`text-xs mt-1 text-right ${isSender ? 'text-forest-200' : 'text-stone-500'
+            }`}
         >
           {formatMessageTime(message.created_at)}
         </div>
       </div>
     </div>
   );
-  
+
   // Component to render an offer message
   const OfferMessage = ({ message, offer, isSender, isCurrentUserSeller }) => {
     const [showActions, setShowActions] = useState(false);
@@ -358,12 +390,12 @@ const Messages = () => {
     const [showCounterForm, setShowCounterForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [offerError, setOfferError] = useState(null);
-    
+
     // Function to handle accepting an offer
     const acceptOffer = async () => {
       setIsSubmitting(true);
       setOfferError(null);
-      
+
       try {
         await handleOfferResponse(offer.id, 'accept');
       } catch (err) {
@@ -373,12 +405,12 @@ const Messages = () => {
         setShowActions(false);
       }
     };
-    
+
     // Function to handle rejecting an offer
     const rejectOffer = async () => {
       setIsSubmitting(true);
       setOfferError(null);
-      
+
       try {
         await handleOfferResponse(offer.id, 'reject');
       } catch (err) {
@@ -388,17 +420,17 @@ const Messages = () => {
         setShowActions(false);
       }
     };
-    
+
     // Function to handle countering an offer
     const counterOffer = async () => {
       if (!counterAmount || parseFloat(counterAmount) <= 0) {
         setOfferError('Please enter a valid counter amount');
         return;
       }
-      
+
       setIsSubmitting(true);
       setOfferError(null);
-      
+
       try {
         await handleOfferResponse(offer.id, 'counter', parseFloat(counterAmount));
         setShowCounterForm(false);
@@ -408,7 +440,7 @@ const Messages = () => {
         setIsSubmitting(false);
       }
     };
-    
+
     // Function to render the status badge
     const renderStatusBadge = () => {
       if (!offer.status || offer.status === 'pending') {
@@ -418,7 +450,7 @@ const Messages = () => {
           </span>
         );
       }
-      
+
       if (offer.status === 'accepted') {
         return (
           <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
@@ -426,7 +458,7 @@ const Messages = () => {
           </span>
         );
       }
-      
+
       if (offer.status === 'rejected') {
         return (
           <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full flex items-center">
@@ -434,7 +466,7 @@ const Messages = () => {
           </span>
         );
       }
-      
+
       if (offer.status === 'countered') {
         return (
           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex items-center">
@@ -442,10 +474,10 @@ const Messages = () => {
           </span>
         );
       }
-      
+
       return null;
     };
-    
+
     return (
       <div className={`rounded-lg p-4 my-2 ${isSender ? 'bg-forest-50 border border-forest-100' : 'bg-stone-100'}`}>
         {/* Offer header */}
@@ -456,17 +488,17 @@ const Messages = () => {
           </div>
           {renderStatusBadge()}
         </div>
-        
+
         {/* Offer amount */}
         <div className="text-2xl font-medium text-forest-700 mb-2">
           {formatPrice(offer.amount)}
         </div>
-        
+
         {/* Message content */}
         <div className="text-stone-600 mb-4">
           {message.content}
         </div>
-        
+
         {/* Counter offer (if applicable) */}
         {offer.status === 'countered' && offer.counter_amount && (
           <div className="bg-blue-50 p-3 rounded-md mb-3">
@@ -476,7 +508,7 @@ const Messages = () => {
             </div>
           </div>
         )}
-        
+
         {/* Error message */}
         {offerError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded mb-3 flex items-center text-sm">
@@ -484,7 +516,7 @@ const Messages = () => {
             {offerError}
           </div>
         )}
-        
+
         {/* Offer actions - only shown to the seller for pending offers */}
         {isCurrentUserSeller && offer.status === 'pending' && (
           <div>
@@ -507,7 +539,7 @@ const Messages = () => {
                     >
                       {isSubmitting ? <Loader className="h-4 w-4 animate-spin" /> : 'Accept'}
                     </button>
-                    
+
                     <button
                       className="py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center justify-center"
                       onClick={() => setShowCounterForm(true)}
@@ -515,7 +547,7 @@ const Messages = () => {
                     >
                       Counter
                     </button>
-                    
+
                     <button
                       className="py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors flex items-center justify-center"
                       onClick={rejectOffer}
@@ -525,7 +557,7 @@ const Messages = () => {
                     </button>
                   </div>
                 )}
-                
+
                 {/* Counter form */}
                 {showCounterForm && (
                   <div>
@@ -555,7 +587,7 @@ const Messages = () => {
                         </button>
                       </div>
                     </div>
-                    
+
                     <button
                       className="text-sm text-stone-600 hover:text-stone-800"
                       onClick={() => setShowCounterForm(false)}
@@ -565,7 +597,7 @@ const Messages = () => {
                     </button>
                   </div>
                 )}
-                
+
                 {/* Cancel button */}
                 {!showCounterForm && (
                   <button
@@ -580,7 +612,7 @@ const Messages = () => {
             )}
           </div>
         )}
-        
+
         {/* Buyer actions for countered offers */}
         {!isCurrentUserSeller && offer.status === 'countered' && (
           <div className="grid grid-cols-2 gap-2 mt-3">
@@ -595,17 +627,17 @@ const Messages = () => {
       </div>
     );
   };
-  
+
   // Component to render a message item (decides between regular and offer messages)
   const MessageItem = ({ message }) => {
     const isSentByCurrentUser = message.sender_id === currentUser?.id;
     const isCurrentUserSeller = message.recipient_id === currentUser?.id;
-    
+
     // Find related offer if this is an offer message
-    const relatedOffer = message.offer_id ? 
-      offers.find(offer => offer.id === message.offer_id) : 
+    const relatedOffer = message.offer_id ?
+      offers.find(offer => offer.id === message.offer_id) :
       null;
-    
+
     // If this is an offer-related message, render OfferMessage component
     if ((message.message_type === 'offer' || message.message_type === 'offer_response') && relatedOffer) {
       return (
@@ -617,20 +649,20 @@ const Messages = () => {
         />
       );
     }
-    
+
     // Otherwise render a regular message
     return (
-      <RegularMessage 
-        message={message} 
-        isSender={isSentByCurrentUser} 
+      <RegularMessage
+        message={message}
+        isSender={isSentByCurrentUser}
       />
     );
   };
-  
+
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-       
+
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -639,11 +671,11 @@ const Messages = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="bg-base min-h-screen">
-     
-      
+
+
       <div className="max-w-7xl mx-auto py-8 px-4">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="flex h-[calc(100vh-12rem)]">
@@ -651,7 +683,7 @@ const Messages = () => {
             <div className="conversation-list w-full md:w-80 border-r">
               <div className="p-4 border-b">
                 <h1 className="text-xl font-medium text-stone-800 mb-4">Messages</h1>
-                
+
                 {/* Search bar */}
                 <div className="relative">
                   <input
@@ -664,7 +696,7 @@ const Messages = () => {
                   <Search className="absolute left-3 top-2.5 h-5 w-5 text-stone-400" />
                 </div>
               </div>
-              
+
               {/* List of conversations */}
               <div className="h-[calc(100%-5rem)] overflow-y-auto">
                 {filteredConversations.length === 0 ? (
@@ -676,19 +708,18 @@ const Messages = () => {
                     {filteredConversations.map((conversation) => (
                       <div
                         key={conversation.other_user.id}
-                        className={`p-4 hover:bg-stone-50 cursor-pointer transition-colors ${
-                          selectedConversation?.other_user.id === conversation.other_user.id 
-                            ? 'bg-forest-50 border-l-4 border-forest-700' 
+                        className={`p-4 hover:bg-stone-50 cursor-pointer transition-colors ${selectedConversation?.other_user.id === conversation.other_user.id
+                            ? 'bg-forest-50 border-l-4 border-forest-700'
                             : ''
-                        }`}
+                          }`}
                         onClick={() => handleSelectConversation(conversation)}
                       >
                         <div className="flex items-center">
                           <div className="w-12 h-12 bg-stone-200 rounded-full overflow-hidden mr-3">
                             {conversation.other_user.avatar_url ? (
-                              <img 
-                                src={conversation.other_user.avatar_url} 
-                                alt={conversation.other_user.username || 'User avatar'} 
+                              <img
+                                src={conversation.other_user.avatar_url}
+                                alt={conversation.other_user.username || 'User avatar'}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
@@ -697,7 +728,7 @@ const Messages = () => {
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-baseline">
                               <h3 className="font-medium text-stone-800 truncate">
@@ -707,11 +738,11 @@ const Messages = () => {
                                 {formatLastMessageTime(conversation.created_at)}
                               </span>
                             </div>
-                            
+
                             <p className="text-sm text-stone-600 truncate">
                               {conversation.content}
                             </p>
-                            
+
                             {/* Unread badge */}
                             {conversation.unread_count > 0 && (
                               <span className="inline-flex items-center justify-center w-5 h-5 text-xs bg-forest-700 text-white rounded-full mt-1">
@@ -726,7 +757,7 @@ const Messages = () => {
                 )}
               </div>
             </div>
-            
+
             {/* Conversation view */}
             <div className="conversation-view hidden md:block md:flex-1">
               {selectedConversation ? (
@@ -741,12 +772,12 @@ const Messages = () => {
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
-                      
+
                       <div className="w-10 h-10 bg-stone-200 rounded-full overflow-hidden mr-3">
                         {selectedConversation.other_user.avatar_url ? (
-                          <img 
-                            src={selectedConversation.other_user.avatar_url} 
-                            alt={selectedConversation.other_user.username || 'User avatar'} 
+                          <img
+                            src={selectedConversation.other_user.avatar_url}
+                            alt={selectedConversation.other_user.username || 'User avatar'}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -767,7 +798,7 @@ const Messages = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Messages container */}
                   <div className="flex-1 overflow-y-auto p-4 bg-stone-50">
                     {messages.length === 0 ? (
@@ -777,23 +808,23 @@ const Messages = () => {
                     ) : (
                       <>
                         {messages.map((message) => (
-                          <MessageItem 
-                            key={message.id} 
-                            message={message} 
+                          <MessageItem
+                            key={message.id}
+                            message={message}
                           />
                         ))}
                       </>
                     )}
                     <div ref={messagesEndRef} />
                   </div>
-                  
+
                   {/* Error message */}
                   {threadError && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 mx-4 mb-2 rounded-md">
                       {threadError}
                     </div>
                   )}
-                  
+
                   {/* Message input */}
                   <div className="bg-white border-t p-4">
                     <form onSubmit={handleSendMessage} className="flex items-center">

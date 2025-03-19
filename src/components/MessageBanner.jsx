@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MessageSquare, Send, X } from 'lucide-react';
 import { sendMessage } from '../supabaseClient';
 
-const MessageBanner = ({ recipient }) => {
+const MessageBanner = ({ recipient, onMessageSent }) => {
   const [showMessageInput, setShowMessageInput] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -18,12 +18,34 @@ const MessageBanner = ({ recipient }) => {
     setError(null);
     
     try {
-      const { error } = await sendMessage(recipient.id, message);
+      // Create a temporary message object for optimistic UI update
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
+        content: message,
+        recipient_id: recipient.id,
+        created_at: new Date().toISOString()
+      };
+      
+      // Call the callback with the temporary message (if provided)
+      if (typeof onMessageSent === 'function') {
+        onMessageSent(tempMessage);
+      }
+      
+      // Clear the message input immediately for better UX
+      setMessage('');
+      
+      // Send the actual message to the server
+      const { data, error } = await sendMessage(recipient.id, message);
       
       if (error) throw error;
       
+      // If the callback exists and we have real data, update with the real message
+      if (typeof onMessageSent === 'function' && data) {
+        onMessageSent(data, tempMessage.id);
+      }
+      
+      // Show success message
       setSuccess(true);
-      setMessage('');
       
       // Hide the input after successful send
       setTimeout(() => {
@@ -33,6 +55,9 @@ const MessageBanner = ({ recipient }) => {
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Failed to send message. Please try again.');
+      
+      // Restore the message in the input field if there's an error
+      setMessage(message);
     } finally {
       setSending(false);
     }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Send, Loader, AlertCircle, Check } from 'lucide-react';
 import { sendMessage } from '../supabaseClient';
 
-const MessageModal = ({ isOpen, onClose, recipient, toolId, toolName }) => {
+const MessageModal = ({ isOpen, onClose, recipient, toolId, toolName, onMessageSent }) => {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -19,12 +19,35 @@ const MessageModal = ({ isOpen, onClose, recipient, toolId, toolName }) => {
     setError(null);
     
     try {
-      const { error } = await sendMessage(recipient.id, message, toolId);
+      // Create a temporary message object for optimistic UI update
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
+        content: message,
+        recipient_id: recipient.id,
+        tool_id: toolId,
+        created_at: new Date().toISOString()
+      };
+      
+      // Call the callback with the temporary message (if provided)
+      if (typeof onMessageSent === 'function') {
+        onMessageSent(tempMessage);
+      }
+      
+      // Clear the message input immediately for better UX
+      setMessage('');
+      
+      // Send the actual message to the server
+      const { data, error } = await sendMessage(recipient.id, message, toolId);
       
       if (error) throw error;
       
+      // Show success message
       setSuccess(true);
-      setMessage('');
+      
+      // If the callback exists and we have real data, update with the real message
+      if (typeof onMessageSent === 'function' && data) {
+        onMessageSent(data, tempMessage.id);
+      }
       
       // Close the modal after a delay
       setTimeout(() => {
@@ -34,6 +57,9 @@ const MessageModal = ({ isOpen, onClose, recipient, toolId, toolName }) => {
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Failed to send message. Please try again.');
+      
+      // Restore the message in the input field if there's an error
+      setMessage(message);
     } finally {
       setSending(false);
     }
