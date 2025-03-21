@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Search,
-  Heart,
-  MessageSquare,
-  Bell,
+  ShoppingCart,
+  Search, 
+  Heart, 
+  MessageSquare, 
+  Bell, 
   User,
   Menu,
   ChevronDown,
@@ -18,7 +19,10 @@ import {
 } from 'lucide-react';
 
 // Import Supabase client and helpers
-import { getCurrentUser, signOut, getUnreadMessageCount, supabase } from './supabaseClient';
+import { getCurrentUser, signOut } from './supabaseClient';
+
+// Import cart components
+import CartIcon from './components/CartIcon';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -26,7 +30,6 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -42,60 +45,6 @@ const Header = () => {
 
     checkUser();
   }, []);
-
-  // Fetch unread message count
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchUnreadCount = async () => {
-      try {
-        const { count, error } = await getUnreadMessageCount();
-        if (error) throw error;
-        setUnreadMessages(count || 0);
-      } catch (err) {
-        console.error('Error fetching unread message count:', err);
-      }
-    };
-
-    fetchUnreadCount();
-
-    // Set up realtime subscription for new messages
-    const messageSubscription = supabase
-      .channel('messages-channel')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `recipient_id=eq.${user.id}`
-      }, payload => {
-        // If the message is unread, increment the counter
-        if (!payload.new.is_read) {
-          setUnreadMessages(prev => prev + 1);
-        }
-      })
-      .subscribe();
-
-    // Set up realtime subscription for updates to messages (marking as read)
-    const messageUpdatesSubscription = supabase
-      .channel('messages-updates-channel')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages',
-        filter: `recipient_id=eq.${user.id}`
-      }, payload => {
-        // If a message was marked as read, refresh the count
-        if (payload.new.is_read && !payload.old.is_read) {
-          fetchUnreadCount();
-        }
-      })
-      .subscribe();
-
-    return () => {
-      messageSubscription.unsubscribe();
-      messageUpdatesSubscription.unsubscribe();
-    };
-  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -132,11 +81,9 @@ const Header = () => {
       <div className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 h-8 flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
-          <Link to="/about" className="hover:text-forest-700">About</Link>
-            <span><a href="https://blog.benchlot.com/blog">
-              Updates
-            </a></span>
-            <Link to="/help" className="hover:text-forest-700">Help</Link>
+            <Link to="/about" className="hover:text-forest-700">About</Link>
+            <span><a href="https://blog.benchlot.com/blog">Updates</a></span>
+            <span className="text-stone-600">Help</span>
           </div>
           <div className="flex items-center gap-4">
           </div>
@@ -156,8 +103,8 @@ const Header = () => {
               <Menu className="h-6 w-6" />
             </button>
 
-            {/* Updated logo link to "/2" */}
-            <Link to="/" className="text-2xl font-serif text-forest-800">Benchlot</Link>
+            {/* Logo link */}
+            <Link to="/2" className="text-2xl font-serif text-forest-800">Benchlot</Link>
 
             {/* Desktop Categories with links to marketplace with filters */}
             <nav className="hidden lg:flex items-center gap-6">
@@ -203,18 +150,20 @@ const Header = () => {
               user ? (
                 // Authenticated user options
                 <>
-                    <Link to="/wishlist" className="text-stone-700 hover:text-forest-700">
+                  <button className="text-stone-700 hover:text-forest-700">
                     <Heart className="h-5 w-5" />
-                  </Link>
+                  </button>
 
-                  <Link to="/messages" className="text-stone-700 hover:text-forest-700 relative">
+                  <button className="text-stone-700 hover:text-forest-700">
                     <MessageSquare className="h-5 w-5" />
-                    {unreadMessages > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-forest-700 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                        {unreadMessages > 9 ? '9+' : unreadMessages}
-                      </span>
-                    )}
-                  </Link>
+                  </button>
+
+                  <button className="text-stone-700 hover:text-forest-700">
+                    <Bell className="h-5 w-5" />
+                  </button>
+                  
+                  {/* Cart Icon */}
+                  <CartIcon />
 
                   <div className="relative">
                     <button
@@ -278,6 +227,9 @@ const Header = () => {
               ) : (
                 // Unauthenticated user options
                 <div className="flex items-center gap-4">
+                  {/* Still show cart for non-logged in users */}
+                  <CartIcon />
+                  
                   <Link to="/login" className="text-stone-700 hover:text-forest-700">
                     Log In
                   </Link>
@@ -357,28 +309,43 @@ const Header = () => {
               {!loading && (
                 user ? (
                   <div className="space-y-3">
-                    <Link to="/profile/me" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
+                    <Link 
+                      to="/cart" 
+                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <ShoppingCart className="h-5 w-5" />
+                      Cart
+                    </Link>
+                    <Link 
+                      to="/profile/me" 
+                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       <User className="h-5 w-5" />
                       My Profile
                     </Link>
-                    <Link to="/my-listings" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
+                    <Link 
+                      to="/my-listings" 
+                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       <Hammer className="h-5 w-5" />
                       My Listings
                     </Link>
-                    <Link to="/wishlist" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
+                    <Link 
+                      to="/wishlist" 
+                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       <Heart className="h-5 w-5" />
                       Saved Tools
                     </Link>
-                    <Link to="/messages" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
-                      <MessageSquare className="h-5 w-5" />
-                      Messages
-                      {unreadMessages > 0 && (
-                        <span className="bg-forest-700 text-white text-xs rounded-full px-2 py-1 ml-auto">
-                          {unreadMessages}
-                        </span>
-                      )}
-                    </Link>
-                    <Link to="/listtool" className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700">
+                    <Link 
+                      to="/listtool" 
+                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       <Plus className="h-5 w-5" />
                       List a Tool
                     </Link>
@@ -392,10 +359,26 @@ const Header = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <Link to="/login" className="block py-2 text-stone-700 hover:text-forest-700">
+                    <Link 
+                      to="/cart" 
+                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <ShoppingCart className="h-5 w-5" />
+                      Cart
+                    </Link>
+                    <Link 
+                      to="/login" 
+                      className="block py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       Log In
                     </Link>
-                    <Link to="/signup" className="block py-2 text-stone-700 hover:text-forest-700">
+                    <Link 
+                      to="/signup" 
+                      className="block py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       Sign Up
                     </Link>
                   </div>

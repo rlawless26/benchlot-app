@@ -28,7 +28,7 @@ import {
   supabase
 } from '../supabaseClient';
 
-
+import AddToCartButton from '../components/AddToCartButton';
 import MessageModal from '../components/MessageModal';
 
 const ToolDetailPage = () => {
@@ -235,6 +235,15 @@ const ToolDetailPage = () => {
     setShowMessageModal(true);
   };
 
+  // Handle opening the offer modal
+const handleMakeOffer = () => {
+  if (!user) {
+    navigate('/login', { state: { from: `/tool/${id}` } });
+    return;
+  }
+  setShowOfferModal(true);
+};
+
   // Function to handle offer submission
   const submitOffer = async () => {
     if (!user) {
@@ -418,7 +427,7 @@ const ToolDetailPage = () => {
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-      
+
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -433,7 +442,7 @@ const ToolDetailPage = () => {
   if (error) {
     return (
       <div className="bg-base min-h-screen">
-        
+
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-6">
             <div className="flex items-start">
@@ -462,7 +471,7 @@ const ToolDetailPage = () => {
   if (!tool) {
     return (
       <div className="bg-base min-h-screen">
-        
+
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-6 py-4 rounded-lg mb-6">
             <div className="flex items-start">
@@ -489,7 +498,7 @@ const ToolDetailPage = () => {
   // Main content when tool is loaded successfully
   return (
     <div className="bg-base min-h-screen">
-     
+
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb navigation */}
@@ -671,35 +680,36 @@ const ToolDetailPage = () => {
               </div>
 
               {/* Action buttons */}
+              {/* Replace your existing buy/action buttons with these */}
               <div className="grid grid-cols-1 gap-3 mb-6">
-                {/* Buy It Now button */}
-                <button
-                  className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center justify-center font-medium"
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Buy It Now
-                </button>
-
-                {/* Make Offer button - only shown if seller allows offers */}
-                {tool.allow_offers && (
+                {/* If the tool is available, show the Add to Cart button */}
+                {!tool.is_sold ? (
+                  <AddToCartButton
+                    tool={tool}
+                    size="large"
+                    className="w-full"
+                  />
+                ) : (
                   <button
-                    className="w-full py-3 bg-white border border-forest-300 text-forest-700 rounded-md hover:bg-forest-50 flex items-center justify-center font-medium"
-                    onClick={() => setShowOfferModal(true)}
+                    className="w-full py-3 bg-stone-400 text-white rounded-md cursor-not-allowed font-medium"
+                    disabled
                   >
-                    <DollarSign className="h-5 w-5 mr-2" />
+                    Sold Out
+                  </button>
+                )}
+
+                {/* Make offer button */}
+                {tool.accepts_offers && !tool.is_sold && (
+                  <button
+                    className="w-full py-3 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 flex items-center justify-center font-medium"
+                    onClick={handleMakeOffer}
+                  >
+                    <MessageSquare className="h-5 w-5 mr-2" />
                     Make Offer
                   </button>
                 )}
 
-                {/* Contact Seller button */}
-                <button
-                  className="w-full py-3 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 flex items-center justify-center font-medium"
-                  onClick={contactSeller}
-                >
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  Contact Seller
-                </button>
-
+                {/* Save to wishlist button */}
                 <button
                   className={`w-full py-3 rounded-md flex items-center justify-center font-medium ${inWishlist ? 'bg-forest-100 text-forest-700 border border-forest-300' : 'bg-white border border-stone-300 text-stone-700 hover:bg-stone-50'}`}
                   onClick={toggleWishlist}
@@ -708,9 +718,9 @@ const ToolDetailPage = () => {
                   {inWishlist ? 'Saved to Wishlist' : 'Save to Wishlist'}
                 </button>
 
+                {/* Share button */}
                 <button
                   className="w-full py-3 bg-white border border-stone-300 text-stone-700 rounded-md hover:bg-stone-50 flex items-center justify-center font-medium"
-                  onClick={handleShare}
                 >
                   <Share className="h-5 w-5 mr-2" />
                   Share

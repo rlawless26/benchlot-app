@@ -6,13 +6,17 @@ import { supabase } from './supabaseClient';
 // Import Layout component
 import Layout from './components/Layout';
 
-// Pages and components
+// Import custom cart components
+import { CartProvider } from './components/CartContext';
+import CartPage from './Pages/CartPage.jsx';
+import CheckoutPage from './Pages/CheckoutPage.jsx';
+
+// Import existing pages
 import LandingPage from './Pages/benchlot-component.jsx';
 import SurveyPage from './Pages/SurveyComponent.jsx';
 import ProductPage from './Pages/ProductPage.jsx';
 import LandingPage2 from './Pages/LandingPage.jsx';
 import MarketplacePage from './Pages/MarketplacePage';
-import CategoriesPage from './Pages/CategoriesPage';
 import ToolDetailPage from './Pages/ToolDetailPage';
 import ToolListingForm from './components/ToolListingForm';
 import UserProfile from './components/UserProfile';
@@ -20,10 +24,11 @@ import AuthPage from './Pages/AuthPage';
 import AboutPage from './Pages/AboutPage';
 import MyListings from './components/MyListings';
 import AdminFeaturedTools from './components/AdminFeaturedTools';
-import HelpPage from './Pages/HelpPage.jsx';
+import HelpPage from './Pages/HelpPage';
 import Wishlist from './components/Wishlist';
 import Messages from './components/Messages';
 import SettingsPage from './Pages/SettingsPage';
+import CategoriesPage from './Pages/CategoriesPage';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -35,14 +40,14 @@ const ProtectedRoute = ({ element }) => {
       setSession(session);
       setLoading(false);
     };
-
+    
     checkUser();
   }, []);
 
   if (loading) return <div>Loading...</div>;
-
+  
   if (!session) return <Navigate to="/login" replace />;
-
+  
   return element;
 };
 
@@ -56,29 +61,29 @@ const AdminRoute = ({ element }) => {
       try {
         // Get the current user session
         const { data: { user } } = await supabase.auth.getUser();
-
+        
         if (!user) {
           setDebugInfo('No authenticated user found');
           setIsAdmin(false);
           setLoading(false);
           return;
         }
-
+        
         setDebugInfo(`Auth user ID: ${user.id}`);
-
+        
         // Get the user's role from the users table
         const { data, error } = await supabase
           .from('users')
           .select('role')
           .eq('id', user.id)
           .single();
-
+        
         if (error) {
           setDebugInfo(`Error fetching user role: ${error.message}`);
         } else {
           setDebugInfo(`User role: ${data?.role || 'no role found'}`);
         }
-
+        
         // Set isAdmin based on the user's role
         setIsAdmin(data?.role === 'admin');
       } catch (err) {
@@ -88,14 +93,14 @@ const AdminRoute = ({ element }) => {
         setLoading(false);
       }
     };
-
+    
     checkAdminStatus();
   }, []);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
-
+  
   if (!isAdmin) {
     return (
       <div className="p-8 text-center">
@@ -108,7 +113,7 @@ const AdminRoute = ({ element }) => {
       </div>
     );
   }
-
+  
   return element;
 };
 
@@ -134,7 +139,9 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  
   return (
+    <CartProvider>
     <Routes>
       {/* Routes that use the Layout (Header + Footer) */}
       <Route element={<Layout />}>
@@ -164,6 +171,17 @@ function App() {
         <Route
           path="/messages"
           element={<ProtectedRoute element={<Messages />} />}
+        />
+        {/* Cart and Checkout Routes */}
+        <Route path="/cart" element={<CartPage />} />
+        <Route 
+          path="/checkout" 
+          element={<ProtectedRoute element={<CheckoutPage />} />} 
+        />
+        
+        <Route 
+          path="/my-listings" 
+          element={<ProtectedRoute element={<MyListings />} />} 
         />
       </Route>
 
@@ -224,7 +242,15 @@ function App() {
         }
       />
     </Routes>
+    </CartProvider>
   );
 }
 
 export default App;
+  
+  
+  
+  
+  
+  
+  
