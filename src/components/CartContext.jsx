@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useState,} from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, } from 'react';
 import { supabase } from '../supabaseClient';
 
 const CartContext = createContext();
@@ -28,10 +28,10 @@ const actionTypes = {
 const calculateTotals = (items) => {
   const count = items.reduce((total, item) => total + item.quantity, 0);
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  
+
   // In a real application, you might calculate tax and shipping here
   const total = subtotal;
-  
+
   return { count, subtotal, total };
 };
 
@@ -45,11 +45,11 @@ const cartReducer = (state, action) => {
         ...calculateTotals(action.payload),
         isLoading: false
       };
-      
+
     case actionTypes.ADD_ITEM: {
       const existingItemIndex = state.items.findIndex(item => item.toolId === action.payload.toolId);
       let newItems;
-      
+
       if (existingItemIndex >= 0) {
         // Item exists, update quantity
         newItems = [...state.items];
@@ -61,7 +61,7 @@ const cartReducer = (state, action) => {
         // New item, add to cart
         newItems = [...state.items, action.payload];
       }
-      
+
       return {
         ...state,
         items: newItems,
@@ -69,10 +69,10 @@ const cartReducer = (state, action) => {
         error: null
       };
     }
-    
+
     case actionTypes.REMOVE_ITEM: {
       const newItems = state.items.filter(item => item.toolId !== action.payload);
-      
+
       return {
         ...state,
         items: newItems,
@@ -80,13 +80,13 @@ const cartReducer = (state, action) => {
         error: null
       };
     }
-    
+
     case actionTypes.UPDATE_QUANTITY: {
       const { toolId, quantity } = action.payload;
-      const newItems = state.items.map(item => 
+      const newItems = state.items.map(item =>
         item.toolId === toolId ? { ...item, quantity } : item
       );
-      
+
       return {
         ...state,
         items: newItems,
@@ -94,7 +94,7 @@ const cartReducer = (state, action) => {
         error: null
       };
     }
-    
+
     case actionTypes.CLEAR_CART:
       return {
         ...state,
@@ -104,20 +104,20 @@ const cartReducer = (state, action) => {
         total: 0,
         error: null
       };
-    
+
     case actionTypes.SET_LOADING:
       return {
         ...state,
         isLoading: action.payload
       };
-    
+
     case actionTypes.SET_ERROR:
       return {
         ...state,
         error: action.payload,
         isLoading: false
       };
-      
+
     default:
       return state;
   }
@@ -127,33 +127,33 @@ export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const [sessionId, setSessionId] = useState(null);
   const [user, setUser] = useState(null);
-  
+
   // Get current user
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data?.user || null);
     };
-    
+
     getUser();
-    
+
     // Subscribe to auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
     });
-    
+
     return () => {
       if (authListener?.subscription) {
         authListener.subscription.unsubscribe();
       }
     };
   }, []);
-  
+
   // Generate a session ID for guest users
   useEffect(() => {
     // Check for an existing session ID in localStorage
     const existingSessionId = localStorage.getItem('guestSessionId');
-    
+
     if (existingSessionId) {
       setSessionId(existingSessionId);
     } else {
@@ -163,35 +163,37 @@ export const CartProvider = ({ children }) => {
       setSessionId(newSessionId);
     }
   }, []);
-  
+
   // Load cart data from localStorage or database
   useEffect(() => {
     const loadCart = async () => {
       dispatch({ type: actionTypes.SET_LOADING, payload: true });
-      
+
       try {
         if (user) {
           // Fetch user's cart from database
           const { data: cartData, error } = await supabase
             .from('carts')
             .select(`
-              id,
-              cart_items (
-                id,
-                tool_id,
-                quantity,
-                price,
-                tool_name,
-                tool_condition,
-                tool_image_url
-              )
-            `)
+    id,
+    cart_items (
+      id,
+      tool_id,
+      quantity,
+      price,
+      tool_name,
+      tool_condition,
+      tool_image_url
+    )
+  `)
             .eq('user_id', user.id)
             .eq('status', 'active')
+            .order('updated_at', { ascending: false })
+            .limit(1)
             .single();
-          
+
           if (error) throw error;
-          
+
           if (cartData) {
             // Transform data for the cart state format
             const items = cartData.cart_items.map(item => ({
@@ -203,7 +205,7 @@ export const CartProvider = ({ children }) => {
               condition: item.tool_condition,
               imageUrl: item.tool_image_url
             }));
-            
+
             dispatch({ type: actionTypes.SET_CART, payload: items });
           } else {
             // No active cart found
@@ -223,22 +225,22 @@ export const CartProvider = ({ children }) => {
         dispatch({ type: actionTypes.SET_ERROR, payload: 'Failed to load cart data' });
       }
     };
-    
+
     if (user || sessionId) {
       loadCart();
     }
   }, [user, sessionId]);
-  
+
   // Save cart to localStorage or database when it changes
   useEffect(() => {
     // Only save once cart is loaded
     if (state.isLoading) return;
-    
+
     const saveCart = async () => {
       try {
         if (user) {
           // Save to database for logged-in user
-          
+
           // First, find or create an active cart
           let cartId;
           const { data: existingCart, error: cartError } = await supabase
@@ -247,11 +249,11 @@ export const CartProvider = ({ children }) => {
             .eq('user_id', user.id)
             .eq('status', 'active')
             .single();
-          
+
           if (cartError && cartError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
             throw cartError;
           }
-          
+
           if (existingCart) {
             cartId = existingCart.id;
           } else {
@@ -266,17 +268,17 @@ export const CartProvider = ({ children }) => {
               })
               .select('id')
               .single();
-            
+
             if (createError) throw createError;
             cartId = newCart.id;
           }
-          
+
           // Delete existing cart items
           await supabase
             .from('cart_items')
             .delete()
             .eq('cart_id', cartId);
-          
+
           // Insert new cart items
           if (state.items.length > 0) {
             const cartItems = state.items.map(item => ({
@@ -288,14 +290,14 @@ export const CartProvider = ({ children }) => {
               tool_condition: item.condition,
               tool_image_url: item.imageUrl
             }));
-            
+
             const { error: insertError } = await supabase
               .from('cart_items')
               .insert(cartItems);
-            
+
             if (insertError) throw insertError;
           }
-          
+
           // Update cart totals
           await supabase
             .from('carts')
@@ -305,7 +307,7 @@ export const CartProvider = ({ children }) => {
               updated_at: new Date().toISOString()
             })
             .eq('id', cartId);
-            
+
         } else if (sessionId) {
           // Save to localStorage for guest users
           localStorage.setItem(`cart_${sessionId}`, JSON.stringify(state.items));
@@ -315,10 +317,10 @@ export const CartProvider = ({ children }) => {
         // We don't dispatch an error here to avoid interrupting the user experience
       }
     };
-    
+
     saveCart();
   }, [state.items, state.subtotal, state.total, user, sessionId]);
-  
+
   // Add item to cart
   const addItem = async (tool, quantity = 1, options = {}) => {
     // Check if the tool is available (you might want to verify with the server)
@@ -330,17 +332,17 @@ export const CartProvider = ({ children }) => {
         .select('id, name, current_price, condition, images, is_sold')
         .eq('id', tool.id)
         .single();
-      
+
       if (error) throw error;
-      
+
       if (toolData.is_sold) {
-        dispatch({ 
-          type: actionTypes.SET_ERROR, 
+        dispatch({
+          type: actionTypes.SET_ERROR,
           payload: 'This tool is no longer available.'
         });
         return;
       }
-      
+
       // Add to cart
       dispatch({
         type: actionTypes.ADD_ITEM,
@@ -356,23 +358,23 @@ export const CartProvider = ({ children }) => {
           fromOffer: options.offerId || null
         }
       });
-      
+
       return true;
     } catch (error) {
       console.error('Error adding item to cart:', error);
-      dispatch({ 
-        type: actionTypes.SET_ERROR, 
+      dispatch({
+        type: actionTypes.SET_ERROR,
         payload: 'Failed to add item to cart. Please try again.'
       });
       return false;
     }
   };
-  
+
   // Remove item from cart
   const removeItem = (toolId) => {
     dispatch({ type: actionTypes.REMOVE_ITEM, payload: toolId });
   };
-  
+
   // Update item quantity
   const updateQuantity = (toolId, quantity) => {
     // Ensure quantity is at least 1
@@ -382,32 +384,32 @@ export const CartProvider = ({ children }) => {
       payload: { toolId, quantity: validQuantity }
     });
   };
-  
+
   // Clear the entire cart
   const clearCart = () => {
     dispatch({ type: actionTypes.CLEAR_CART });
   };
-  
+
   // Merge guest cart with user cart on login
   const mergeWithUserCart = async () => {
     if (!user || !sessionId) return;
-    
+
     try {
       dispatch({ type: actionTypes.SET_LOADING, payload: true });
-      
+
       // Get guest cart from localStorage
       const guestCartJson = localStorage.getItem(`cart_${sessionId}`);
       if (!guestCartJson) {
         dispatch({ type: actionTypes.SET_LOADING, payload: false });
         return; // No guest cart to merge
       }
-      
+
       const guestCartItems = JSON.parse(guestCartJson);
       if (guestCartItems.length === 0) {
         dispatch({ type: actionTypes.SET_LOADING, payload: false });
         return; // Empty guest cart
       }
-      
+
       // Get the user's current cart
       const { data: cartData, error: cartError } = await supabase
         .from('carts')
@@ -426,11 +428,11 @@ export const CartProvider = ({ children }) => {
         .eq('user_id', user.id)
         .eq('status', 'active')
         .single();
-      
+
       // Handle cart creation if needed
       let cartId;
       let currentItems = [];
-      
+
       if (cartError && cartError.code === 'PGRST116') {
         // No cart exists, create one
         const { data: newCart, error: createError } = await supabase
@@ -443,7 +445,7 @@ export const CartProvider = ({ children }) => {
           })
           .select('id')
           .single();
-        
+
         if (createError) throw createError;
         cartId = newCart.id;
       } else if (cartError) {
@@ -461,13 +463,13 @@ export const CartProvider = ({ children }) => {
           imageUrl: item.tool_image_url
         }));
       }
-      
+
       // Merge items
       const mergedItems = [...currentItems];
-      
+
       for (const guestItem of guestCartItems) {
         const existingIndex = mergedItems.findIndex(item => item.toolId === guestItem.toolId);
-        
+
         if (existingIndex >= 0) {
           // Update quantity if item exists
           mergedItems[existingIndex].quantity += guestItem.quantity;
@@ -476,28 +478,28 @@ export const CartProvider = ({ children }) => {
           mergedItems.push(guestItem);
         }
       }
-      
+
       // Update cart in state
       dispatch({ type: actionTypes.SET_CART, payload: mergedItems });
-      
+
       // Clear guest cart
       localStorage.removeItem(`cart_${sessionId}`);
     } catch (error) {
       console.error('Error merging carts:', error);
-      dispatch({ 
-        type: actionTypes.SET_ERROR, 
+      dispatch({
+        type: actionTypes.SET_ERROR,
         payload: 'Failed to merge cart data. Please try again.'
       });
     }
   };
-  
+
   // When a user logs in, merge their guest cart with their account cart
   useEffect(() => {
     if (user && sessionId && !state.isLoading) {
       mergeWithUserCart();
     }
   }, [user, sessionId]);
-  
+
   const value = {
     ...state,
     addItem,
@@ -505,7 +507,7 @@ export const CartProvider = ({ children }) => {
     updateQuantity,
     clearCart
   };
-  
+
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 

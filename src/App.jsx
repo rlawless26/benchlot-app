@@ -29,6 +29,7 @@ import Wishlist from './components/Wishlist';
 import Messages from './components/Messages';
 import SettingsPage from './Pages/SettingsPage';
 import CategoriesPage from './Pages/CategoriesPage';
+import SellerOnboarding from './components/SellerOnboarding';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -178,7 +179,7 @@ function App() {
           path="/checkout" 
           element={<ProtectedRoute element={<CheckoutPage />} />} 
         />
-        
+        <Route path="/become-seller" element={<SellerOnboarding />} />
         <Route 
           path="/my-listings" 
           element={<ProtectedRoute element={<MyListings />} />} 

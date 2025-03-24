@@ -82,8 +82,9 @@ const Header = () => {
         <div className="max-w-7xl mx-auto px-4 h-8 flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
             <Link to="/about" className="hover:text-forest-700">About</Link>
-            <span><a href="https://blog.benchlot.com/blog">Updates</a></span>
-            <span className="text-stone-600">Help</span>
+            {/* <span><a href="https://blog.benchlot.com/blog">Updates</a></span>*/}
+            <Link to="/help" className="hover:text-forest-700">Help</Link>
+            <Link to="/become-seller" className="hover:text-forest-700">Sell your tools</Link>
           </div>
           <div className="flex items-center gap-4">
           </div>
@@ -104,7 +105,7 @@ const Header = () => {
             </button>
 
             {/* Logo link */}
-            <Link to="/2" className="text-2xl font-serif text-forest-800">Benchlot</Link>
+            <Link to="/" className="text-2xl font-serif text-forest-800">Benchlot</Link>
 
             {/* Desktop Categories with links to marketplace with filters */}
             <nav className="hidden lg:flex items-center gap-6">

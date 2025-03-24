@@ -1,349 +1,438 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
 import { 
-  AlertCircle, 
-  CheckCircle, 
-  CreditCard, 
+  ArrowRight, 
+  ShieldCheck, 
+  Camera, 
   DollarSign, 
-  ExternalLink, 
-  Loader,
-  User,
-  ShieldCheck
+  BarChart,
+  Users,
+  Star,
+  ChevronRight
 } from 'lucide-react';
-import Header from '../header';
-import { supabase } from '../supabaseClient';
 
-const SellerOnboarding = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [stripeLoading, setStripeLoading] = useState(false);
-  const [accountStatus, setAccountStatus] = useState(null);
-  const [error, setError] = useState(null);
+const SellerLandingPage = () => {
+  const [email, setEmail] = useState('');
   
-  // Check if user is logged in
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          navigate('/login?redirect=/become-seller');
-          return;
-        }
-        
-        setUser(user);
-        
-        // Check if user already has a Stripe account
-        const { data: profile } = await supabase
-          .from('users')
-          .select('stripe_account_id, stripe_account_status')
-          .eq('id', user.id)
-          .single();
-          
-        if (profile?.stripe_account_id) {
-          await checkAccountStatus(user.id);
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
-        setError('An error occurred while loading your profile.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    getUser();
-  }, [navigate]);
-  
-  // Check on page load if returning from Stripe
-  useEffect(() => {
-    const checkOnboarding = async () => {
-      const queryParams = new URLSearchParams(location.search);
-      const isCompleted = queryParams.get('completed') === 'true';
-      const needsRefresh = queryParams.get('refresh') === 'true';
-      
-      if (isCompleted && user) {
-        // Check account status after return from Stripe
-        await checkAccountStatus(user.id);
-        
-        // Remove query parameters from URL
-        navigate('/become-seller', { replace: true });
-      } else if (needsRefresh && user) {
-        // User returned because of an expired link, show them a new one
-        setError('Your previous session expired. Please try connecting again.');
-        navigate('/become-seller', { replace: true });
-      }
-    };
-    
-    if (!loading) {
-      checkOnboarding();
-    }
-  }, [loading, user, location, navigate]);
-  
-  // Check Stripe account status
-  const checkAccountStatus = async (userId) => {
-    try {
-      const response = await fetch(`/api/stripe/connect-account-status/${userId}`);
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      setAccountStatus(data);
-      
-      // Update seller status in database if verified
-      if (data.status === 'verified' && user) {
-        await supabase
-          .from('users')
-          .update({ 
-            stripe_account_status: 'verified',
-            is_seller: true
-          })
-          .eq('id', user.id);
-      }
-    } catch (error) {
-      console.error('Error checking account status:', error);
-      setError('Failed to check your seller account status. Please try again.');
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle form submission logic here
+    console.log("Email submitted:", email);
+    // Redirect to seller account setup
+    window.location.href = "/seller/setup";
   };
-  
-  // Create or connect Stripe account
-  const connectStripeAccount = async () => {
-    try {
-      setStripeLoading(true);
-      setError(null);
-      
-      const response = await fetch('/api/stripe/create-connect-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.email,
-          refreshUrl: `${window.location.origin}/become-seller?refresh=true`,
-          returnUrl: `${window.location.origin}/become-seller?completed=true`
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      // Redirect to Stripe's hosted onboarding flow
-      window.location.href = data.url;
-    } catch (error) {
-      console.error('Error connecting Stripe account:', error);
-      setError('Failed to connect with Stripe. Please try again.');
-    } finally {
-      setStripeLoading(false);
-    }
-  };
-  
-  // Render loading state
-  if (loading) {
-    return (
-      <div className="bg-base min-h-screen">
-        <Header />
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="flex justify-center items-center py-20">
-            <Loader className="h-8 w-8 text-forest-700 animate-spin" />
-            <span className="ml-2 text-stone-600">Loading...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
   
   return (
     <div className="bg-base min-h-screen">
-      <Header />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-serif font-medium mb-6">Become a Seller</h1>
-        
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6 flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
-        
-        {/* Account status indicator */}
-        {accountStatus && (
-          <div className={`rounded-lg p-4 mb-6 flex items-start ${
-            accountStatus.status === 'verified' 
-              ? 'bg-green-50 border border-green-200 text-green-700' 
-              : 'bg-yellow-50 border border-yellow-200 text-yellow-700'
-          }`}>
-            {accountStatus.status === 'verified' ? (
-              <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-            )}
-            
+      {/* Hero Section */}
+      <section className="py-16 md:py-24 bg-stone-50 border-b border-stone-200">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <p className="font-medium">
-                {accountStatus.status === 'verified' 
-                  ? 'Your seller account is active!' 
-                  : 'Your seller account needs attention'}
+              <h1 className="font-serif text-4xl md:text-5xl font-medium text-stone-800 mb-6">
+                Sell your tools to Boston's woodworking community
+              </h1>
+              <p className="text-lg text-stone-600 mb-8">
+                Join the trusted marketplace for quality woodworking tools. 
+                Professional photography, secure payments, and a dedicated 
+                community of makers ready to buy your tools.
               </p>
-              <p className="mt-1">
-                {accountStatus.status === 'verified' 
-                  ? 'You can now list tools and receive payments.' 
-                  : 'Please complete your Stripe onboarding to start selling.'}
-              </p>
-              
-              {accountStatus.status !== 'verified' && (
-                <button
-                  onClick={connectStripeAccount}
-                  className="mt-3 px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800 inline-flex items-center"
-                  disabled={stripeLoading}
-                >
-                  {stripeLoading ? (
-                    <>
-                      <Loader className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Complete Onboarding
-                    </>
-                  )}
-                </button>
-              )}
+              <form onSubmit={handleSubmit} className="max-w-md">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input 
+                    type="email" 
+                    placeholder="Enter your email to get started" 
+                    className="flex-1 px-4 py-3 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-forest-500"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <button 
+                    type="submit"
+                    className="bg-forest-700 text-white px-6 py-3 rounded-md hover:bg-forest-800 transition-colors flex items-center justify-center"
+                  >
+                    Get Started
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div className="hidden md:block">
+              <img 
+                src="/api/placeholder/600/400" 
+                alt="Craftsman with woodworking tools" 
+                className="rounded-lg shadow-lg object-cover w-full h-auto"
+              />
             </div>
           </div>
-        )}
-        
-        {/* Main content */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6 border-b border-stone-200">
-            <h2 className="text-xl font-medium mb-2">Seller Benefits</h2>
-            <p className="text-stone-600">
-              Join our community of tool sellers and start earning from your unused tools.
+        </div>
+      </section>
+      
+      {/* How It Works Section */}
+      <section className="py-16 md:py-24">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="text-center mb-16">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium text-stone-800 mb-4">
+              How selling works on Benchlot
+            </h2>
+            <p className="text-lg text-stone-600 max-w-3xl mx-auto">
+              Our straightforward process helps you turn unused tools into cash quickly and safely.
             </p>
           </div>
           
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex">
-                <div className="flex-shrink-0 w-12 h-12 bg-forest-100 rounded-full flex items-center justify-center mr-4">
-                  <DollarSign className="h-6 w-6 text-forest-700" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-lg mb-2">Earn Money</h3>
-                  <p className="text-stone-600">
-                    Turn your unused tools into cash. Our sellers earn an average of $750 in their first month.
-                  </p>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-lg shadow-sm border border-stone-100">
+              <div className="w-12 h-12 bg-forest-100 rounded-full flex items-center justify-center mb-6">
+                <Camera className="h-6 w-6 text-forest-700" />
               </div>
-              
-              <div className="flex">
-                <div className="flex-shrink-0 w-12 h-12 bg-forest-100 rounded-full flex items-center justify-center mr-4">
-                  <ShieldCheck className="h-6 w-6 text-forest-700" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-lg mb-2">Safe Transactions</h3>
-                  <p className="text-stone-600">
-                    Secure payments through Stripe, protection against fraud, and verification of buyers.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex">
-                <div className="flex-shrink-0 w-12 h-12 bg-forest-100 rounded-full flex items-center justify-center mr-4">
-                  <User className="h-6 w-6 text-forest-700" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-lg mb-2">Reach More Buyers</h3>
-                  <p className="text-stone-600">
-                    Access our growing community of tool enthusiasts, professionals, and DIYers.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex">
-                <div className="flex-shrink-0 w-12 h-12 bg-forest-100 rounded-full flex items-center justify-center mr-4">
-                  <CreditCard className="h-6 w-6 text-forest-700" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-lg mb-2">Fast Payouts</h3>
-                  <p className="text-stone-600">
-                    Get paid quickly with direct deposits to your bank account after a sale is completed.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8">
-              <h3 className="font-medium text-lg mb-2">How It Works</h3>
-              <ol className="list-decimal pl-5 space-y-2 text-stone-600">
-                <li>Connect your Stripe account to receive payments securely.</li>
-                <li>List your tools with photos, descriptions, and pricing.</li>
-                <li>Receive offers and orders from interested buyers.</li>
-                <li>Ship or coordinate local pickup for your tools.</li>
-                <li>Get paid directly to your bank account.</li>
-              </ol>
-            </div>
-            
-            <div className="mt-8">
-              <h3 className="font-medium text-lg mb-2">Fees</h3>
-              <p className="text-stone-600 mb-2">
-                Benchlot charges a simple fee structure:
+              <h3 className="font-serif text-xl font-medium text-stone-800 mb-3">
+                List your tools
+              </h3>
+              <p className="text-stone-600">
+                Create detailed listings with our guided process. We offer professional photography 
+                services in the Boston area to help your tools stand out.
               </p>
-              <ul className="list-disc pl-5 space-y-1 text-stone-600">
-                <li>5% platform fee on each transaction</li>
-                <li>3% payment processing fee (standard Stripe fee)</li>
-                <li>You receive 92% of each sale</li>
-              </ul>
             </div>
             
-            {accountStatus?.status === 'verified' ? (
-              <div className="mt-8 text-center">
-                <p className="text-green-700 font-medium mb-4">You're all set to start selling!</p>
-                <button
-                  onClick={() => navigate('/listtool')}
-                  className="px-6 py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 inline-flex items-center"
-                >
-                  List Your First Tool
-                </button>
+            <div className="bg-white p-8 rounded-lg shadow-sm border border-stone-100">
+              <div className="w-12 h-12 bg-forest-100 rounded-full flex items-center justify-center mb-6">
+                <ShieldCheck className="h-6 w-6 text-forest-700" />
               </div>
-            ) : (
-              <div className="mt-8 text-center">
-                <button
-                  onClick={connectStripeAccount}
-                  className="px-6 py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 inline-flex items-center"
-                  disabled={stripeLoading}
-                >
-                  {stripeLoading ? (
-                    <>
-                      <Loader className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Connect with Stripe
-                    </>
-                  )}
-                </button>
-                
-                <p className="mt-4 text-sm text-stone-500">
-                  You'll be redirected to Stripe to complete your seller account setup.
-                </p>
+              <h3 className="font-serif text-xl font-medium text-stone-800 mb-3">
+                Make secure sales
+              </h3>
+              <p className="text-stone-600">
+                Our secure payment system protects both buyers and sellers. 
+                Coordinate local pickup or use our shipping partners for safe delivery.
+              </p>
+            </div>
+            
+            <div className="bg-white p-8 rounded-lg shadow-sm border border-stone-100">
+              <div className="w-12 h-12 bg-forest-100 rounded-full flex items-center justify-center mb-6">
+                <DollarSign className="h-6 w-6 text-forest-700" />
               </div>
-            )}
+              <h3 className="font-serif text-xl font-medium text-stone-800 mb-3">
+                Get paid quickly
+              </h3>
+              <p className="text-stone-600">
+                Receive payment directly to your bank account within 2-3 business days 
+                of a completed sale. No waiting for checks or dealing with cash.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+      
+      {/* Why Sell on Benchlot Section */}
+      <section className="py-16 md:py-24 bg-stone-50 border-y border-stone-200">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="text-center mb-16">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium text-stone-800 mb-4">
+              Why sell on Benchlot?
+            </h2>
+            <p className="text-lg text-stone-600 max-w-3xl mx-auto">
+              Join hundreds of makers who trust Benchlot to sell their quality tools.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16">
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-forest-100 rounded-full flex items-center justify-center">
+                  <Users className="h-5 w-5 text-forest-700" />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg text-stone-800 mb-2">Reach the right buyers</h3>
+                <p className="text-stone-600">
+                  Connect with a targeted community of woodworkers and makers who understand 
+                  and value quality tools rather than bargain hunters.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-forest-100 rounded-full flex items-center justify-center">
+                  <Camera className="h-5 w-5 text-forest-700" />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg text-stone-800 mb-2">Professional presentation</h3>
+                <p className="text-stone-600">
+                  We offer photography services and listing assistance to ensure your 
+                  tools look their best and attract serious buyers.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-forest-100 rounded-full flex items-center justify-center">
+                  <BarChart className="h-5 w-5 text-forest-700" />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg text-stone-800 mb-2">Fair market pricing</h3>
+                <p className="text-stone-600">
+                  Our pricing guides help you set the right price based on actual market 
+                  data, so you can get what your tools are truly worth.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-forest-100 rounded-full flex items-center justify-center">
+                  <ShieldCheck className="h-5 w-5 text-forest-700" />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-medium text-lg text-stone-800 mb-2">Secure transactions</h3>
+                <p className="text-stone-600">
+                  No-haggle selling with verified buyers, secure payments processed by 
+                  Stripe, and protection against fraud or payment issues.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Testimonials */}
+      <section className="py-16 md:py-24">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="text-center mb-16">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium text-stone-800 mb-4">
+              What sellers are saying
+            </h2>
+            <p className="text-lg text-stone-600 max-w-3xl mx-auto">
+              Hear from makers who have successfully sold tools on Benchlot
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-stone-100">
+              <div className="flex items-center mb-4">
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              </div>
+              <p className="text-stone-600 mb-4">
+                "I sold my entire workshop in two weeks when I was downsizing. The professional 
+                photos made a huge difference, and I got fair prices for everything."
+              </p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-stone-200 rounded-full mr-3"></div>
+                <div>
+                  <h4 className="font-medium text-stone-800">Thomas R.</h4>
+                  <p className="text-sm text-stone-500">Cambridge, MA</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-stone-100">
+              <div className="flex items-center mb-4">
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              </div>
+              <p className="text-stone-600 mb-4">
+                "As someone who upgrades my tools regularly, Benchlot has become my go-to 
+                platform. The buyers are serious and knowledgeable, no lowball offers."
+              </p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-stone-200 rounded-full mr-3"></div>
+                <div>
+                  <h4 className="font-medium text-stone-800">Sarah J.</h4>
+                  <p className="text-sm text-stone-500">Somerville, MA</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-stone-100">
+              <div className="flex items-center mb-4">
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              </div>
+              <p className="text-stone-600 mb-4">
+                "The secure payment system gives me peace of mind. I've sold over 20 tools on 
+                Benchlot and every transaction has been smooth and professional."
+              </p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-stone-200 rounded-full mr-3"></div>
+                <div>
+                  <h4 className="font-medium text-stone-800">Michael T.</h4>
+                  <p className="text-sm text-stone-500">Boston, MA</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Seller FAQ */}
+      <section className="py-16 md:py-24 bg-stone-50 border-t border-stone-200">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="text-center mb-16">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium text-stone-800 mb-4">
+              Common questions about selling
+            </h2>
+            <p className="text-lg text-stone-600 max-w-3xl mx-auto">
+              Everything you need to know to get started
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+            <div>
+              <h3 className="font-medium text-lg text-stone-800 mb-2">What does it cost to sell on Benchlot?</h3>
+              <p className="text-stone-600">
+                Listing is free. Benchlot charges a 5% transaction fee when your item sells, plus a 3% 
+                payment processing fee. There are no subscription or monthly fees.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-lg text-stone-800 mb-2">How do I know what to price my tools?</h3>
+              <p className="text-stone-600">
+                Our listing tools provide pricing guidance based on recent comparable sales. You can 
+                also request a pricing consultation from our team for specialty items.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-lg text-stone-800 mb-2">How does shipping work?</h3>
+              <p className="text-stone-600">
+                You can choose between local pickup (most common) or shipping. For shipping, we provide 
+                packaging guidelines and can help arrange freight for larger items.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-lg text-stone-800 mb-2">When do I get paid?</h3>
+              <p className="text-stone-600">
+                Funds are released to your account 24 hours after the buyer receives the item. For 
+                pickup sales, this is typically 1-2 days after the sale is completed.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-lg text-stone-800 mb-2">What happens if something goes wrong?</h3>
+              <p className="text-stone-600">
+                Our seller protection policy covers you against fraudulent payments and buyer claims. 
+                Our support team is available to help resolve any issues that may arise.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-lg text-stone-800 mb-2">Do I need professional photos?</h3>
+              <p className="text-stone-600">
+                While not required, professional photos significantly improve your chances of selling quickly 
+                and at a better price. We offer photography services in the Boston area.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* CTA Section */}
+      <section className="py-16 md:py-24 bg-forest-700 text-white">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 text-center">
+          <h2 className="font-serif text-3xl md:text-4xl font-medium mb-6">
+            Ready to turn your unused tools into cash?
+          </h2>
+          <p className="text-lg text-forest-100 mb-8 max-w-3xl mx-auto">
+            Join the trusted marketplace connecting quality tools with the makers who need them. 
+            Start selling today with just your email and a few photos.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button 
+              className="bg-white text-forest-700 px-8 py-4 rounded-md hover:bg-forest-50 transition-colors text-lg font-medium"
+              onClick={() => window.location.href = "/seller/signup"}
+            >
+              Start Selling
+            </button>
+            <button 
+              className="bg-transparent border border-white text-white px-8 py-4 rounded-md hover:bg-forest-600 transition-colors text-lg font-medium"
+              onClick={() => window.location.href = "/seller/learn-more"}
+            >
+              Learn More
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* What You'll Need Section */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="font-serif text-3xl md:text-4xl font-medium text-stone-800 mb-6">
+                What you'll need to get started
+              </h2>
+              <p className="text-lg text-stone-600 mb-6">
+                Setting up your seller account is easy and secure.
+              </p>
+              
+              <ul className="space-y-4">
+                <li className="flex gap-3">
+                  <ChevronRight className="h-6 w-6 text-forest-700 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-medium text-stone-800">Valid photo ID</h3>
+                    <p className="text-stone-600">For identity verification and account security</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <ChevronRight className="h-6 w-6 text-forest-700 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-medium text-stone-800">Bank account information</h3>
+                    <p className="text-stone-600">To receive your payments securely and quickly</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <ChevronRight className="h-6 w-6 text-forest-700 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-medium text-stone-800">Basic tool details</h3>
+                    <p className="text-stone-600">Including brands, models, and condition information</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <ChevronRight className="h-6 w-6 text-forest-700 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-medium text-stone-800">Good quality photos</h3>
+                    <p className="text-stone-600">Or schedule a session with our photography team</p>
+                  </div>
+                </li>
+              </ul>
+              
+              <div className="mt-8">
+                <button 
+                  className="flex items-center text-forest-700 font-medium hover:text-forest-800"
+                  onClick={() => window.location.href = "/seller/requirements"}
+                >
+                  View detailed requirements
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <img 
+                src="/api/placeholder/500/400" 
+                alt="Setting up a seller account" 
+                className="rounded-lg shadow-lg object-cover w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
 
-export default SellerOnboarding;
+export default SellerLandingPage;
