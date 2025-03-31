@@ -9,7 +9,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware for CORS
-app.use(cors());
+app.use(cors({ 
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  credentials: true,
+  maxAge: 600
+}));
 
 // Content Security Policy using Helmet
 app.use(helmet({
@@ -72,9 +76,16 @@ app.use((req, res, next) => {
   if (req.originalUrl === '/api/stripe/webhooks') {
     next();
   } else {
-    express.json()(req, res, next);
+    express.json({ limit: '50mb' })(req, res, next);
   }
 });
+
+// Add URL-encoded parser with increased limits
+app.use(express.urlencoded({ 
+  limit: '50mb', 
+  extended: true,
+  parameterLimit: 50000
+}));
 
 // API routes
 app.use('/api/stripe', stripeApi);

@@ -18,8 +18,8 @@ const SellerLandingPage = () => {
     e.preventDefault();
     // Handle form submission logic here
     console.log("Email submitted:", email);
-    // Redirect to seller account setup
-    window.location.href = "/seller/setup";
+    // Redirect to seller signup page
+    window.location.href = "/seller/signup";
   };
   
   return (
@@ -361,7 +361,7 @@ const SellerLandingPage = () => {
             </button>
             <button 
               className="bg-transparent border border-white text-white px-8 py-4 rounded-md hover:bg-forest-600 transition-colors text-lg font-medium"
-              onClick={() => window.location.href = "/seller/learn-more"}
+              onClick={() => window.location.href = "/help"}
             >
               Learn More
             </button>
@@ -415,7 +415,7 @@ const SellerLandingPage = () => {
               <div className="mt-8">
                 <button 
                   className="flex items-center text-forest-700 font-medium hover:text-forest-800"
-                  onClick={() => window.location.href = "/seller/requirements"}
+                  onClick={() => window.location.href = "/help"}
                 >
                   View detailed requirements
                   <ArrowRight className="ml-2 h-4 w-4" />
