@@ -30,6 +30,9 @@ import Messages from './components/Messages';
 import SettingsPage from './Pages/SettingsPage';
 import CategoriesPage from './Pages/CategoriesPage';
 import SellerOnboarding from './components/SellerOnboarding';
+import SellerSignupPage from './Pages/SellerSignupPage';
+import SellerOnboardingPage from './Pages/SellerOnboardingPage';
+import SellerDashboardPage from './Pages/SellerDashboardPage';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -179,8 +182,10 @@ function App() {
           path="/checkout" 
           element={<ProtectedRoute element={<CheckoutPage />} />} 
         />
-        <Route path="/become-seller" element={<SellerOnboarding />} />
-        <Route 
+<Route path="/become-seller" element={<SellerOnboarding />} />
+<Route path="/seller/signup" element={<SellerSignupPage />} />
+<Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
+<Route path="/seller/dashboard" element={<SellerDashboardPage />} />        <Route 
           path="/my-listings" 
           element={<ProtectedRoute element={<MyListings />} />} 
         />

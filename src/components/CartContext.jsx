@@ -46,29 +46,33 @@ const cartReducer = (state, action) => {
         isLoading: false
       };
 
-    case actionTypes.ADD_ITEM: {
-      const existingItemIndex = state.items.findIndex(item => item.toolId === action.payload.toolId);
-      let newItems;
-
-      if (existingItemIndex >= 0) {
-        // Item exists, update quantity
-        newItems = [...state.items];
-        newItems[existingItemIndex] = {
-          ...newItems[existingItemIndex],
-          quantity: newItems[existingItemIndex].quantity + action.payload.quantity
+      case actionTypes.ADD_ITEM: {
+        const existingItemIndex = state.items.findIndex(item => item.toolId === action.payload.toolId);
+        let newItems;
+      
+        if (existingItemIndex >= 0) {
+          // Item exists, update quantity
+          newItems = [...state.items];
+          newItems[existingItemIndex] = {
+            ...newItems[existingItemIndex],
+            quantity: newItems[existingItemIndex].quantity + action.payload.quantity
+          };
+        } else {
+          // New item, add to cart with a temporary ID
+          const newItem = {
+            ...action.payload,
+            id: action.payload.id || `temp-${action.payload.toolId}-${Date.now()}` // Generate a unique temp ID
+          };
+          newItems = [...state.items, newItem];
+        }
+      
+        return {
+          ...state,
+          items: newItems,
+          ...calculateTotals(newItems),
+          error: null
         };
-      } else {
-        // New item, add to cart
-        newItems = [...state.items, action.payload];
       }
-
-      return {
-        ...state,
-        items: newItems,
-        ...calculateTotals(newItems),
-        error: null
-      };
-    }
 
     case actionTypes.REMOVE_ITEM: {
       const newItems = state.items.filter(item => item.toolId !== action.payload);
@@ -289,6 +293,7 @@ export const CartProvider = ({ children }) => {
               tool_name: item.name,
               tool_condition: item.condition,
               tool_image_url: item.imageUrl
+              // Note: We don't include the temporary id here
             }));
 
             const { error: insertError } = await supabase

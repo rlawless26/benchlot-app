@@ -9,6 +9,7 @@ import {
   Star,
   ChevronRight
 } from 'lucide-react';
+import shopbackground from '../assets/shopbackground.jpg';
 
 const SellerLandingPage = () => {
   const [email, setEmail] = useState('');
@@ -58,7 +59,7 @@ const SellerLandingPage = () => {
             </div>
             <div className="hidden md:block">
               <img 
-                src="/api/placeholder/600/400" 
+                src={shopbackground}
                 alt="Craftsman with woodworking tools" 
                 className="rounded-lg shadow-lg object-cover w-full h-auto"
               />

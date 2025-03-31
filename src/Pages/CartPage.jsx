@@ -94,7 +94,7 @@ const CartPage = () => {
               {/* Cart Items */}
               <div className="divide-y divide-stone-200">
                 {items.map((item) => (
-                  <div key={item.toolId} className="p-6">
+                  <div key={item.id || `cart-${item.toolId}`} className="p-6">
                     {/* Mobile Layout */}
                     <div className="md:hidden">
                       <div className="flex mb-4">

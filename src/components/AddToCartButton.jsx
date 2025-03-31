@@ -9,7 +9,7 @@ const AddToCartButton = ({ tool, size = 'default', className = '', showIcon = tr
   const [error, setError] = useState(null);
   
   const handleAddToCart = async () => {
-    if (isAdding) return;
+    if (isAdding || isAdded) return; // Prevent multiple rapid clicks
     
     setIsAdding(true);
     setError(null);

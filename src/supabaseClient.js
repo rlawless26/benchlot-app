@@ -447,15 +447,42 @@ export const isToolInWishlist = async (toolId) => {
 };
 
 // User profile functions
-export const updateUserProfile = async (profileData) => {
-  const { data: user } = await getCurrentUser();
+export const updateUserProfile = async (userData) => {
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: { message: 'You must be logged in to update your profile' } };
   
   const { data, error } = await supabase
     .from('users')
-    .update(profileData)
+    .update(userData)
     .eq('id', user.id)
     .select()
+    .single();
+  
+  return { data, error };
+};
+
+export const fetchSellerData = async (userId) => {
+  if (!userId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id;
+  }
+  
+  if (!userId) return { error: { message: 'No user ID provided' } };
+  
+  const { data, error } = await supabase
+    .from('users')
+    .select(`
+      id,
+      username,
+      full_name,
+      is_seller,
+      seller_name,
+      seller_bio,
+      location,
+      stripe_account_id,
+      stripe_account_status
+    `)
+    .eq('id', userId)
     .single();
   
   return { data, error };
