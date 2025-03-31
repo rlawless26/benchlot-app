@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const stripeApi = require('./api/stripe');
+const helmet = require('helmet'); // You'll need to install this: npm install helmet
 require('dotenv').config();
 
 const app = express();
@@ -9,6 +10,62 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware for CORS
 app.use(cors());
+
+// Content Security Policy using Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://*.stripe.network",
+        "https://*.hs-scripts.com",
+        "http://*.hs-scripts.com",
+        "'unsafe-inline'",
+        "blob:"
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://*.stripe.com",
+        "https://fonts.googleapis.com",
+        "https://p.typekit.net",
+        "https://use.typekit.net"
+      ],
+      connectSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://api.stripe.com",
+        "https://r.stripe.com",
+        "https://m.stripe.com",
+        "https://*.supabase.co",
+        "https://hooks.stripe.com",
+        "https://js.stripe.com",
+        "https://checkout.stripe.com"
+      ],
+      frameSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://*.stripe.network",
+        "https://connect.stripe.com",
+        "https://checkout.stripe.com"
+      ],
+      imgSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://*.supabase.co",
+        "data:",
+        "https://js.stripe.com"
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com",
+        "https://use.typekit.net"
+      ]
+    }
+  }
+}));
 
 // Middleware for parsing JSON (except for webhook endpoint)
 app.use((req, res, next) => {
