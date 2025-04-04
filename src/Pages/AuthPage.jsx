@@ -264,9 +264,9 @@ const AuthPage = ({ mode = 'login' }) => {
             
             {mode === 'login' && (
               <div className="flex justify-end mb-6">
-                <a href="#" className="text-sm text-forest-700 hover:text-forest-800">
+                <Link to="/reset-password" className="text-sm text-forest-700 hover:text-forest-800">
                   Forgot password?
-                </a>
+                </Link>
               </div>
             )}
             

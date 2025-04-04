@@ -30,6 +30,18 @@ export const signUp = async (email, password, userData) => {
       });
       
     if (profileError) return { error: profileError };
+    
+    // Import here to avoid circular dependencies
+    const emailService = require('./utils/emailService').default;
+    
+    // Send welcome email
+    try {
+      await emailService.sendAccountCreationEmail(email, userData.fullName || userData.username);
+      console.log('Welcome email sent to:', email);
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError);
+      // Don't return error, as the signup was successful
+    }
   }
   
   return { data: authData };
@@ -48,12 +60,83 @@ export const signOut = async () => {
   return { error };
 };
 
-export const updateUserPassword = async (newPassword) => {
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword
-  });
-  
-  return { error };
+export const updateUserPassword = async (currentPassword, newPassword) => {
+  try {
+    // Get current user's email
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { error: { message: 'User not authenticated' } };
+    }
+    
+    // First verify the current password is correct (by attempting to sign in)
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword
+    });
+    
+    if (signInError) {
+      return { error: { message: 'Current password is incorrect' } };
+    }
+    
+    // If verification successful, update the password
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    return { error };
+  } catch (err) {
+    console.error('Error in updateUserPassword:', err);
+    return { error: err };
+  }
+};
+
+export const resetPassword = async (email) => {
+  try {
+    // Get the base URL to use for the reset link
+    const baseUrl = window.location.origin;
+    
+    // Send password reset email with redirect URL
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${baseUrl}/reset-password`
+    });
+    
+    if (!error) {
+      // Import the email service to avoid circular dependencies
+      const emailService = require('./utils/emailService').default;
+      
+      try {
+        // Send custom password reset email in addition to Supabase's built-in email
+        // This allows for a more branded experience
+        await emailService.sendPasswordResetEmail(
+          email,
+          `${baseUrl}/reset-password?email=${encodeURIComponent(email)}`
+        );
+        console.log('Custom password reset email sent to:', email);
+      } catch (emailError) {
+        console.error('Error sending custom password reset email:', emailError);
+        // Don't return error, as the Supabase reset email was sent successfully
+      }
+    }
+    
+    return { error };
+  } catch (err) {
+    console.error('Error in resetPassword:', err);
+    return { error: err };
+  }
+};
+
+export const completePasswordReset = async (newPassword) => {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    return { error };
+  } catch (err) {
+    console.error('Error in completePasswordReset:', err);
+    return { error: err };
+  }
 };
 
 export const getCurrentUser = async () => {
@@ -218,6 +301,28 @@ export const createTool = async (toolData) => {
     })
     .select()
     .single();
+  
+  if (!error && data) {
+    // Import the email service to avoid circular dependencies
+    const emailService = require('./utils/emailService').default;
+    
+    // Send listing published confirmation email to seller
+    try {
+      await emailService.sendListingPublishedEmail(
+        user.email,
+        {
+          title: data.name,
+          price: data.current_price,
+          image: data.images?.[0] || 'https://benchlot.com/images/placeholder-tool.jpg', // Default placeholder image
+          id: data.id
+        }
+      );
+      console.log('Listing published email sent to:', user.email);
+    } catch (emailError) {
+      console.error('Error sending listing published email:', emailError);
+      // Don't return error, as the listing creation was successful
+    }
+  }
   
   return { data, error };
 };
@@ -595,6 +700,50 @@ export const sendMessage = async (recipientId, content, toolId = null) => {
     })
     .select();
   
+  if (!error && data && data.length > 0) {
+    // Import the email service to avoid circular dependencies
+    const emailService = require('./utils/emailService').default;
+    
+    try {
+      // Get recipient details
+      const { data: recipient } = await supabase
+        .from('users')
+        .select('email, username, full_name')
+        .eq('id', recipientId)
+        .single();
+      
+      // Get sender details (already have user object but need to confirm fields)
+      const senderName = user.profile?.full_name || user.profile?.username || user.email;
+      
+      if (recipient) {
+        // Send message received email to recipient
+        await emailService.sendMessageReceivedEmail(
+          recipient.email,
+          {
+            senderName: senderName,
+            messageText: content,
+            senderId: user.id
+          }
+        );
+        console.log('Message received email sent to:', recipient.email);
+        
+        // Send message sent confirmation to sender (optional)
+        await emailService.sendMessageSentEmail(
+          user.email,
+          {
+            recipientName: recipient.full_name || recipient.username,
+            messageText: content,
+            recipientId: recipientId
+          }
+        );
+        console.log('Message sent confirmation email sent to:', user.email);
+      }
+    } catch (emailError) {
+      console.error('Error sending message notification emails:', emailError);
+      // Don't return error, as the message was sent successfully
+    }
+  }
+  
   return { data, error };
 };
 
@@ -764,6 +913,40 @@ export const createOffer = async (toolId, amount, message = '') => {
       })
       .eq('id', messageData[0].id);
     
+    // Send email notification to seller
+    // Import the email service to avoid circular dependencies
+    const emailService = require('./utils/emailService').default;
+    
+    try {
+      // Get seller details
+      const { data: seller } = await supabase
+        .from('users')
+        .select('email, username, full_name')
+        .eq('id', tool.seller_id)
+        .single();
+      
+      // Get buyer name
+      const buyerName = user.profile?.full_name || user.profile?.username || user.email;
+      
+      if (seller) {
+        // Send offer received email to seller
+        await emailService.sendOfferReceivedEmail(
+          seller.email,
+          {
+            buyerName: buyerName,
+            listingTitle: tool.name,
+            offerAmount: amount,
+            listingPrice: tool.current_price,
+            offerId: offerData[0].id
+          }
+        );
+        console.log('Offer received email sent to:', seller.email);
+      }
+    } catch (emailError) {
+      console.error('Error sending offer notification email:', emailError);
+      // Don't throw, as the offer was created successfully
+    }
+    
     return { data: offerData[0], error: null };
     
   } catch (err) {
@@ -846,7 +1029,7 @@ export const respondToOffer = async (offerId, action, counterAmount = null) => {
     .from('offers')
     .select(`
       *,
-      tool:tool_id (name)
+      tool:tool_id (name, id, current_price)
     `)
     .eq('id', offerId)
     .single();
@@ -901,6 +1084,41 @@ export const respondToOffer = async (offerId, action, counterAmount = null) => {
       });
     
     if (messageError) throw messageError;
+    
+    // Send email notification to buyer
+    // Import the email service to avoid circular dependencies
+    const emailService = require('./utils/emailService').default;
+    
+    try {
+      // Get buyer details
+      const { data: buyer } = await supabase
+        .from('users')
+        .select('email, username, full_name')
+        .eq('id', offer.buyer_id)
+        .single();
+      
+      // Get seller name
+      const sellerName = user.profile?.full_name || user.profile?.username || user.email;
+      
+      if (buyer) {
+        // Send offer update email to buyer
+        await emailService.sendOfferUpdateEmail(
+          buyer.email,
+          {
+            sellerName: sellerName,
+            listingTitle: offer.tool.name,
+            status: action === 'counter' ? 'countered' : action,
+            offerAmount: offer.amount,
+            counterOffer: action === 'counter' ? counterAmount : null,
+            listingId: offer.tool_id
+          }
+        );
+        console.log('Offer update email sent to:', buyer.email);
+      }
+    } catch (emailError) {
+      console.error('Error sending offer update email:', emailError);
+      // Don't throw, as the offer response was created successfully
+    }
     
     return { data: data[0], error: null };
     

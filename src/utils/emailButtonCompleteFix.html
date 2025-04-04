@@ -1,0 +1,117 @@
+<!-- COMPLETE EMAIL BUTTON FIX FOR ALL TEMPLATES -->
+
+<!-- 1. Basic Button (e.g., "Reset Password") -->
+<div style="text-align:center;">
+  <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;margin:20px auto;">
+    <tr>
+      <td align="center" bgcolor="#17613F" role="presentation" style="border:none;border-radius:4px;background-color:#17613F;padding:12px 24px;" valign="middle">
+        <a href="{{reset_link}}" style="background:#17613F;color:#ffffff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:inline-block;" target="_blank">
+          Reset Password
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- 2. Account Creation - "Sign In to Your Account" -->
+<div style="text-align:center;">
+  <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;margin:20px auto;">
+    <tr>
+      <td align="center" bgcolor="#17613F" role="presentation" style="border:none;border-radius:4px;background-color:#17613F;padding:12px 24px;" valign="middle">
+        <a href="{{login_link}}" style="background:#17613F;color:#ffffff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:inline-block;" target="_blank">
+          Sign In to Your Account
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- 3. Listing Published - "View Your Listing" -->
+<div style="text-align:center;">
+  <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;margin:20px auto;">
+    <tr>
+      <td align="center" bgcolor="#17613F" role="presentation" style="border:none;border-radius:4px;background-color:#17613F;padding:12px 24px;" valign="middle">
+        <a href="{{listing_url}}" style="background:#17613F;color:#ffffff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:inline-block;" target="_blank">
+          View Your Listing
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- 4. Message Received - "Reply to Message" -->
+<div style="text-align:center;">
+  <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;margin:20px auto;">
+    <tr>
+      <td align="center" bgcolor="#17613F" role="presentation" style="border:none;border-radius:4px;background-color:#17613F;padding:12px 24px;" valign="middle">
+        <a href="{{message_url}}" style="background:#17613F;color:#ffffff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:inline-block;" target="_blank">
+          Reply to Message
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- 5. Offer Received - "View Offer Details" -->
+<div style="text-align:center;">
+  <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;margin:20px auto;">
+    <tr>
+      <td align="center" bgcolor="#17613F" role="presentation" style="border:none;border-radius:4px;background-color:#17613F;padding:12px 24px;" valign="middle">
+        <a href="{{offer_url}}" style="background:#17613F;color:#ffffff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:inline-block;" target="_blank">
+          View Offer Details
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- 6. For Accept/Counter/Decline Buttons in Offer Email -->
+<div style="text-align:center; width:100%;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation" style="border-collapse:separate;">
+    <tr>
+      <!-- Accept Button -->
+      <td width="33%" align="center" style="padding:0 5px;">
+        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;width:100%;">
+          <tr>
+            <td align="center" bgcolor="#17613F" role="presentation" style="border:none;border-radius:4px;background-color:#17613F;padding:10px;" valign="middle">
+              <a href="{{offer_url}}?action=accept" style="background:#17613F;color:#ffffff;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:block;" target="_blank">
+                Accept
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+      
+      <!-- Counter Button -->
+      <td width="33%" align="center" style="padding:0 5px;">
+        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;width:100%;">
+          <tr>
+            <td align="center" bgcolor="#FFFFFF" role="presentation" style="border:1px solid #17613F;border-radius:4px;background-color:#FFFFFF;padding:10px;" valign="middle">
+              <a href="{{offer_url}}?action=counter" style="background:#FFFFFF;color:#17613F;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:block;" target="_blank">
+                Counter
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+      
+      <!-- Decline Button -->
+      <td width="33%" align="center" style="padding:0 5px;">
+        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;width:100%;">
+          <tr>
+            <td align="center" bgcolor="#F0EEE6" role="presentation" style="border:none;border-radius:4px;background-color:#F0EEE6;padding:10px;" valign="middle">
+              <a href="{{offer_url}}?action=decline" style="background:#F0EEE6;color:#44403C;font-family:'Montserrat',sans-serif;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;display:block;" target="_blank">
+                Decline
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- 7. In-text links - always use !important for color -->
+<p>
+  This is a paragraph with an <a href="https://benchlot.com" style="color:#17613F !important; font-weight:500; text-decoration:underline;">inline link</a> that should appear in the brand color.
+</p>

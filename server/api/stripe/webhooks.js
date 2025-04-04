@@ -200,11 +200,17 @@ async function handlePaymentIntentFailed(paymentIntent) {
 // Handle account updates (for seller onboarding)
 async function handleAccountUpdated(account) {
   console.log('Processing account update:', account.id);
+  console.log('Account details:', JSON.stringify({
+    id: account.id,
+    details_submitted: account.details_submitted,
+    charges_enabled: account.charges_enabled,
+    payouts_enabled: account.payouts_enabled
+  }));
   
   // Find the user with this Stripe account ID
   const { data: user, error: userError } = await supabase
     .from('users')
-    .select('id')
+    .select('id, email, is_seller, stripe_account_status')
     .eq('stripe_account_id', account.id)
     .single();
     
@@ -212,6 +218,8 @@ async function handleAccountUpdated(account) {
     console.error('Failed to find user with Stripe account:', userError);
     return;
   }
+
+  console.log('Found user:', user.id, user.email);
   
   // Determine if the account is fully onboarded
   const isOnboarded = 
@@ -219,18 +227,32 @@ async function handleAccountUpdated(account) {
     account.charges_enabled && 
     account.payouts_enabled;
   
+  // Match the status to your database schema's constraints
+  // Your schema allows 'pending', 'verified', 'rejected'
+  const accountStatus = isOnboarded ? 'verified' : 'pending';
+  
+  // Set seller_since timestamp if becoming verified for the first time
+  const updateData = { 
+    stripe_account_status: accountStatus,
+    stripe_account_details_submitted: account.details_submitted,
+    is_seller: isOnboarded
+  };
+  
+  // Only set seller_since if this is the first time becoming a verified seller
+  if (isOnboarded && (!user.is_seller || user.stripe_account_status !== 'verified')) {
+    updateData.seller_since = new Date().toISOString();
+  }
+  
   // Update the user record
   const { error: updateError } = await supabase
     .from('users')
-    .update({ 
-      stripe_account_status: isOnboarded ? 'active' : 'pending',
-      stripe_account_details_submitted: account.details_submitted,
-      is_seller: isOnboarded // Auto-activate seller status
-    })
+    .update(updateData)
     .eq('id', user.id);
     
   if (updateError) {
-    console.error('Failed to update user seller status:', updateError);
+    console.error('Failed to update user seller status:', updateError, updateData);
+  } else {
+    console.log(`Successfully updated user ${user.id} to seller status: ${accountStatus}`);
   }
 }
 

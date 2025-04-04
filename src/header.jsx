@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart,
   Search, 
   Heart, 
   MessageSquare, 
-  Bell, 
   User,
   Menu,
   ChevronDown,
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 
 // Import Supabase client and helpers
-import { getCurrentUser, signOut } from './supabaseClient';
+import { supabase, getCurrentUser, signOut } from './supabaseClient';
 
 // Import cart components
 import CartIcon from './components/CartIcon';
@@ -30,26 +29,87 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  
+  // Create a ref for the profile menu
+  const profileMenuRef = useRef(null);
 
+  // Handle clicks outside of the profile menu to close it
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data } = await getCurrentUser();
-        setUser(data);
-      } catch (error) {
-        console.error('Error checking user:', error);
-      } finally {
-        setLoading(false);
+    const handleClickOutside = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setProfileMenuOpen(false);
       }
     };
 
-    checkUser();
+    // Only add the event listener if the menu is open
+    if (profileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    // Clean up the event listener
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileMenuOpen]);
+
+  // Function to fetch user data including profile
+  const fetchUserData = async () => {
+    try {
+      const { data } = await getCurrentUser();
+      
+      // Debug user profile information
+      if (data && data.profile) {
+        console.log('User profile in header:', 
+          `is_seller: ${data.profile.is_seller}`, 
+          `stripe_account_id: ${data.profile.stripe_account_id}`,
+          `stripe_account_status: ${data.profile.stripe_account_status}`
+        );
+      }
+      
+      setUser(data);
+    } catch (error) {
+      console.error('Error checking user:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Initial fetch of user data
+    fetchUserData();
+    
+    // Set up a listener for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(`Auth event: ${event}`);
+        
+        if (event === 'SIGNED_IN') {
+          // User just signed in, fetch their data
+          await fetchUserData();
+        } else if (event === 'SIGNED_OUT') {
+          // User just signed out
+          setUser(null);
+        } else if (event === 'USER_UPDATED') {
+          // User was updated
+          await fetchUserData();
+        }
+      }
+    );
+    
+    // Clean up subscription when component unmounts
+    return () => {
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const handleLogout = async () => {
     try {
+      setProfileMenuOpen(false); // Close the profile menu
       await signOut();
-      setUser(null);
+      // setUser(null) will be handled by the auth listener
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -82,11 +142,10 @@ const Header = () => {
         <div className="max-w-7xl mx-auto px-4 h-8 flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
             <Link to="/about" className="hover:text-forest-700">About</Link>
-            {/* <span><a href="https://blog.benchlot.com/blog">Updates</a></span>*/}
             <Link to="/help" className="hover:text-forest-700">Help</Link>
-            <Link to="/become-seller" className="hover:text-forest-700">Sell your tools</Link>
           </div>
           <div className="flex items-center gap-4">
+            {/* Empty for spacing */}
           </div>
         </div>
       </div>
@@ -151,21 +210,29 @@ const Header = () => {
               user ? (
                 // Authenticated user options
                 <>
-                  <button className="text-stone-700 hover:text-forest-700">
+                  {/* Sell your gear button - conditionally routes based on seller status */}
+                  <Link 
+                    to={user.profile?.is_seller ? "/listtool" : "/become-seller"} 
+                    className="text-forest-700 hover:bg-forest-50 inline-flex items-center px-3 py-1.5 border border-forest-700 rounded-md"
+                  >
+                    <Hammer className="h-5 w-5 mr-1" />
+                    <span className="hidden md:inline">Sell your gear</span>
+                  </Link>
+                  
+                  {/* Wishlist icon */}
+                  <Link to="/wishlist" className="text-stone-700 hover:text-forest-700">
                     <Heart className="h-5 w-5" />
-                  </button>
-
-                  <button className="text-stone-700 hover:text-forest-700">
-                    <MessageSquare className="h-5 w-5" />
-                  </button>
-
-                  <button className="text-stone-700 hover:text-forest-700">
-                    <Bell className="h-5 w-5" />
-                  </button>
+                  </Link>
                   
                   {/* Cart Icon */}
                   <CartIcon />
-
+                  
+                  {/* Messages Icon */}
+                  <Link to="/messages" className="text-stone-700 hover:text-forest-700">
+                    <MessageSquare className="h-5 w-5" />
+                  </Link>
+                  
+                  {/* User Profile Dropdown */}
                   <div className="relative">
                     <button
                       className="text-stone-700 hover:text-forest-700 relative"
@@ -183,7 +250,7 @@ const Header = () => {
                     </button>
 
                     {profileMenuOpen && (
-                      <div className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md p-2 min-w-[200px] z-10">
+                      <div ref={profileMenuRef} className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md p-2 min-w-[200px] z-10">
                         <div className="px-4 py-2 text-sm font-medium text-stone-700 border-b">
                           {user.profile?.username || user.email}
                         </div>
@@ -193,9 +260,14 @@ const Header = () => {
                           My Profile
                         </Link>
 
-                        <Link to="/my-listings" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 text-sm">
+                        <Link to="/seller/listings" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 text-sm">
                           <List className="h-4 w-4" />
                           My Listings
+                        </Link>
+                        
+                        <Link to="/seller/dashboard" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 text-sm">
+                          <Package className="h-4 w-4" />
+                          Shop Dashboard
                         </Link>
 
                         <Link to="/wishlist" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 text-sm">
@@ -220,27 +292,29 @@ const Header = () => {
                       </div>
                     )}
                   </div>
-                  <a href="/listtool" className="px-4 py-2 bg-white border border-forest-300 text-forest-700 rounded-md hover:bg-forest-50 inline-flex items-center justify-center">
-                    <Hammer className="h-5 w-5 mr-2" />
-                    List a Tool
-                  </a>
                 </>
               ) : (
                 // Unauthenticated user options
-                <div className="flex items-center gap-4">
-                  {/* Still show cart for non-logged in users */}
+                <>
+                  <Link to="/become-seller" className="text-forest-700 hover:bg-forest-50 inline-flex items-center px-3 py-1.5 border border-forest-700 rounded-md">
+                    <Hammer className="h-5 w-5 mr-1" />
+                    <span className="hidden md:inline">Sell your tools</span>
+                  </Link>
+                  
+                  {/* Cart Icon */}
                   <CartIcon />
                   
                   <Link to="/login" className="text-stone-700 hover:text-forest-700">
                     Log In
                   </Link>
+                  
                   <Link
                     to="/signup"
                     className="hidden md:flex items-center gap-2 px-4 py-2 bg-forest-700 hover:bg-forest-800 text-white rounded-md"
                   >
                     Sign Up
                   </Link>
-                </div>
+                </>
               )
             )}
           </div>
@@ -327,12 +401,20 @@ const Header = () => {
                       My Profile
                     </Link>
                     <Link 
-                      to="/my-listings" 
+                      to="/seller/listings" 
                       className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <Hammer className="h-5 w-5" />
+                      <List className="h-5 w-5" />
                       My Listings
+                    </Link>
+                    <Link 
+                      to="/seller/dashboard" 
+                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Package className="h-5 w-5" />
+                      Shop Dashboard
                     </Link>
                     <Link 
                       to="/wishlist" 
@@ -343,12 +425,12 @@ const Header = () => {
                       Saved Tools
                     </Link>
                     <Link 
-                      to="/listtool" 
-                      className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"
+                      to={user.profile?.is_seller ? "/listtool" : "/become-seller"}
+                      className="flex items-center gap-3 py-2 px-3 text-forest-700 border border-forest-700 rounded-md hover:bg-forest-50"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      <Plus className="h-5 w-5" />
-                      List a Tool
+                      <Hammer className="h-5 w-5" />
+                      Sell your gear
                     </Link>
                     <button
                       onClick={handleLogout}
@@ -360,6 +442,14 @@ const Header = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    <Link 
+                      to="/become-seller" 
+                      className="flex items-center gap-3 py-2 px-3 text-forest-700 border border-forest-700 rounded-md hover:bg-forest-50"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Hammer className="h-5 w-5" />
+                      Sell your tools
+                    </Link>
                     <Link 
                       to="/cart" 
                       className="flex items-center gap-3 py-2 text-stone-700 hover:text-forest-700"

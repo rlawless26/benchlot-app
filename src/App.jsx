@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 
@@ -21,6 +21,7 @@ import ToolDetailPage from './Pages/ToolDetailPage';
 import ToolListingForm from './components/ToolListingForm';
 import UserProfile from './components/UserProfile';
 import AuthPage from './Pages/AuthPage';
+import ResetPasswordPage from './Pages/ResetPasswordPage';
 import AboutPage from './Pages/AboutPage';
 import MyListings from './components/MyListings';
 import AdminFeaturedTools from './components/AdminFeaturedTools';
@@ -33,6 +34,9 @@ import SellerOnboarding from './components/SellerOnboarding';
 import SellerSignupPage from './Pages/SellerSignupPage';
 import SellerOnboardingPage from './Pages/SellerOnboardingPage';
 import SellerDashboardPage from './Pages/SellerDashboardPage';
+import SellerOrdersPage from './Pages/SellerOrdersPage';
+import SellerEarningsPage from './Pages/SellerEarningsPage';
+import SellerAnalyticsPage from './Pages/SellerAnalyticsPage';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -160,12 +164,13 @@ function App() {
         <Route path="/help" element={<HelpPage />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
         <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/wishlist"
           element={<ProtectedRoute element={<Wishlist />} />}
         />
         <Route
-          path="/my-listings"
+          path="/seller/listings"
           element={<ProtectedRoute element={<MyListings />} />}
         />
         <Route
@@ -185,10 +190,10 @@ function App() {
 <Route path="/become-seller" element={<SellerOnboarding />} />
 <Route path="/seller/signup" element={<SellerSignupPage />} />
 <Route path="/seller/onboarding" element={<SellerOnboardingPage />} />
-<Route path="/seller/dashboard" element={<SellerDashboardPage />} />        <Route 
-          path="/my-listings" 
-          element={<ProtectedRoute element={<MyListings />} />} 
-        />
+<Route path="/seller/dashboard" element={<SellerDashboardPage />} />
+<Route path="/seller/orders" element={<ProtectedRoute element={<SellerOrdersPage />} />} />
+<Route path="/seller/earnings" element={<ProtectedRoute element={<SellerEarningsPage />} />} />
+<Route path="/seller/analytics" element={<ProtectedRoute element={<SellerAnalyticsPage />} />} />
       </Route>
 
       {/* Routes that don't use the global Layout */}

@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getCurrentUser } from '../supabaseClient';
 
-
+/**
+ * Clean implementation of Seller Onboarding Page
+ * Uses a minimal API call pattern that won't trigger header size issues
+ */
 const SellerOnboardingPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accountStatus, setAccountStatus] = useState(null);
+  const [requirements, setRequirements] = useState(null);
   const [error, setError] = useState(null);
   
   // Check if this is a refresh from Stripe
@@ -27,19 +31,41 @@ const SellerOnboardingPage = () => {
         
         setUser(data);
         
-        // Check account status
-        const response = await fetch(`/api/stripe/connect/account-status/${data.id}`);
-        const statusData = await response.json();
+        // Check account status using the clean endpoint with query parameters
+        // Connect to our clean server on port 3002
+        const statusUrl = `http://localhost:3002/api/v1/stripe/connect/status?userId=${encodeURIComponent(data.id)}`;
+        
+        const response = await fetch(statusUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          credentials: 'omit' // Don't send cookies
+        });
         
         if (!response.ok) {
-          throw new Error(statusData.error || 'Failed to check account status');
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Failed to check account status: ${response.status}`);
         }
         
+        const statusData = await response.json();
         setAccountStatus(statusData);
         
-        // If account is active, redirect to dashboard
+        // If account is fully active, redirect to dashboard
         if (statusData.status === 'active') {
           navigate('/seller/dashboard');
+        }
+        
+        // Fetch more detailed requirements information
+        const reqUrl = `http://localhost:3002/api/v1/stripe/connect/requirements?userId=${encodeURIComponent(data.id)}`;
+        
+        const reqResponse = await fetch(reqUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          credentials: 'omit'
+        });
+        
+        if (reqResponse.ok) {
+          const requirementsData = await reqResponse.json();
+          setRequirements(requirementsData);
         }
         
         setLoading(false);
@@ -58,25 +84,35 @@ const SellerOnboardingPage = () => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/stripe/connect/create-connect-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.email
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to refresh onboarding link');
+      if (!user) {
+        throw new Error('User information is missing');
       }
       
-      // Redirect to the new onboarding URL
-      window.location.href = data.accountLink;
+      // Get a new onboarding link using clean endpoint with query parameters
+      // Connect to our clean server on port 3002
+      const linkUrl = `http://localhost:3002/api/v1/stripe/connect/onboard?userId=${encodeURIComponent(user.id)}`;
+      
+      const response = await fetch(linkUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'omit' // Don't send cookies
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to get onboarding link: ${response.status}`);
+      }
+      
+      // Parse the JSON response to get the URL
+      const data = await response.json();
+      
+      if (!data.url) {
+        throw new Error('No Stripe URL returned');
+      }
+      
+      // Open the Stripe URL in a new tab
+      window.open(data.url, '_blank');
+      setLoading(false);
       
     } catch (err) {
       console.error('Error refreshing onboarding link:', err);
@@ -88,7 +124,6 @@ const SellerOnboardingPage = () => {
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-        
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-forest-700"></div>
@@ -101,15 +136,13 @@ const SellerOnboardingPage = () => {
 
   return (
     <div className="bg-base min-h-screen">
-   
-      
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md p-8">
           <h1 className="text-3xl font-serif font-medium text-stone-800 mb-6">Complete Your Seller Onboarding</h1>
           
           {isRefresh && (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md mb-6">
-              Your session has expired. Please continue onboarding to complete your seller account setup.
+              Your Stripe session has expired. Please continue onboarding to complete your seller account setup.
             </div>
           )}
           
@@ -120,40 +153,122 @@ const SellerOnboardingPage = () => {
           )}
           
           <div className="space-y-6">
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md mb-6">
+              <p className="font-medium">
+                You're already set up to start selling on Benchlot! 
+                {accountStatus && !accountStatus.payoutsEnabled && 
+                  ' Additional verification is needed to receive payments.'}
+              </p>
+            </div>
+            
             <p className="text-stone-600">
-              To start selling on Benchlot, we need to set up your payment processing. This allows
-              you to receive payments securely when your tools sell.
+              Benchlot uses Stripe to handle secure payments. You can start listing tools immediately, but
+              you'll need to complete verification before you can receive payments from sales.
             </p>
             
-            {accountStatus && !accountStatus.detailsSubmitted && (
-              <div className="bg-stone-50 border border-stone-200 p-6 rounded-lg">
-                <h2 className="text-lg font-medium text-stone-800 mb-4">Complete Stripe Onboarding</h2>
-                <p className="mb-4">You'll need to complete the following steps:</p>
+            {/* For accounts that need currently due requirements */}
+            {requirements && requirements.requirements?.currently_due?.length > 0 && (
+              <div className="bg-white border border-stone-200 p-6 rounded-lg mb-6">
+                <h2 className="text-lg font-medium text-stone-800 mb-4">Required to Receive Payments</h2>
+                <p className="mb-4">Please complete these required steps:</p>
                 <ul className="list-disc pl-5 mb-6 space-y-2">
-                  <li>Verify your identity</li>
-                  <li>Connect a bank account</li>
-                  <li>Provide business information (if applicable)</li>
+                  {requirements.requirements.currently_due.map((req, index) => (
+                    <li key={index}>{req}</li>
+                  ))}
                 </ul>
-                <p className="mb-6">This information is securely handled by Stripe, our payment processor.</p>
-                <button
+                <button 
                   onClick={handleRefreshLink}
                   className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 font-medium"
                 >
-                  Continue Onboarding
+                  Complete Required Information
                 </button>
               </div>
             )}
             
-            {accountStatus && accountStatus.detailsSubmitted && !accountStatus.payoutsEnabled && (
-              <div className="bg-stone-50 border border-stone-200 p-6 rounded-lg">
-                <h2 className="text-lg font-medium text-stone-800 mb-4">Onboarding in Progress</h2>
+            {/* For accounts with eventually due requirements */}
+            {requirements && requirements.requirements?.eventually_due?.length > 0 && (
+              <div className="bg-stone-50 border border-stone-200 p-6 rounded-lg mb-6">
+                <h2 className="text-lg font-medium text-stone-800 mb-4">Eventually Needed (Not Urgent)</h2>
+                <p className="mb-4">You can provide these details later:</p>
+                <ul className="list-disc pl-5 mb-6 space-y-2">
+                  {requirements.requirements.eventually_due.map((req, index) => (
+                    <li key={index}>{req}</li>
+                  ))}
+                </ul>
+                <p className="text-sm text-stone-500 mb-4">
+                  This information isn't required to start selling, but will be needed eventually.
+                </p>
+                <button 
+                  onClick={handleRefreshLink}
+                  className="w-full py-3 bg-stone-300 text-stone-700 rounded-md hover:bg-stone-400 font-medium"
+                >
+                  Complete Additional Information
+                </button>
+              </div>
+            )}
+            
+            {/* For accounts with pending verification */}
+            {requirements && requirements.requirements?.pending_verification?.length > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg mb-6">
+                <h2 className="text-lg font-medium text-yellow-800 mb-4">Verification in Progress</h2>
+                <p className="mb-4">Stripe is currently reviewing:</p>
+                <ul className="list-disc pl-5 mb-6 space-y-2 text-yellow-800">
+                  {requirements.requirements.pending_verification.map((req, index) => (
+                    <li key={index}>{req}</li>
+                  ))}
+                </ul>
                 <p className="mb-4">
-                  Thanks for submitting your information! Stripe is currently reviewing your account.
+                  This usually takes 1-2 business days. We'll notify you when verification is complete.
+                </p>
+                <button 
+                  onClick={handleRefreshLink}
+                  className="w-full py-3 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded-md hover:bg-yellow-200 font-medium"
+                >
+                  Check Status Again
+                </button>
+              </div>
+            )}
+            
+            {/* When all requirements are complete but payouts aren't enabled yet */}
+            {accountStatus && accountStatus.detailsSubmitted && !accountStatus.payoutsEnabled && 
+             requirements && requirements.requirements?.currently_due?.length === 0 && (
+              <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg">
+                <h2 className="text-lg font-medium text-blue-800 mb-4">Almost Done!</h2>
+                <p className="mb-4">
+                  Thanks for submitting your information! Your account is being activated.
                   This usually takes 1-2 business days.
                 </p>
                 <p className="mb-6">
-                  We'll notify you when your account is ready to start accepting payments.
+                  You can continue selling while we wait for activation to complete.
                 </p>
+                <div className="flex space-x-4">
+                  <button 
+                    onClick={handleRefreshLink}
+                    className="w-1/2 py-3 bg-blue-100 text-blue-800 border border-blue-300 rounded-md hover:bg-blue-200 font-medium"
+                  >
+                    Check Status Again
+                  </button>
+                  <a 
+                    href="/listtool"
+                    className="block w-1/2 text-center py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 font-medium"
+                  >
+                    List a Tool
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {/* If no status data is available yet */}
+            {!requirements && !accountStatus && (
+              <div className="bg-stone-50 border border-stone-200 p-6 rounded-lg">
+                <h2 className="text-lg font-medium text-stone-800 mb-4">Complete Your Verification</h2>
+                <p className="mb-4">You need to set up payment processing to receive payouts from your sales.</p>
+                <button 
+                  onClick={handleRefreshLink}
+                  className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 font-medium"
+                >
+                  Set Up Payments
+                </button>
               </div>
             )}
           </div>

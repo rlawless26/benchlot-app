@@ -8,6 +8,7 @@
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-separator": "^x.x.x",
     "@radix-ui/react-slider": "^1.2.3",
+    "@sendgrid/mail": "^8.1.4",
     "@stripe/react-stripe-js": "^3.5.1",
     "@stripe/stripe-js": "^6.1.0",
     "@supabase/supabase-js": "^2.49.1",
@@ -35,7 +36,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server/index.js",
-    "dev": "concurrently \"npm run start\" \"npm run server\""
+    "clean-server": "node server/clean-server.js",
+    "dev": "concurrently \"npm run start\" \"npm run server\"",
+    "dev-clean": "concurrently \"npm run start\" \"npm run clean-server\""
   },
   "eslintConfig": {
     "extends": [

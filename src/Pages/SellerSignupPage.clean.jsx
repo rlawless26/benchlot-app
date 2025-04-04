@@ -10,10 +10,13 @@ const SellerSignupPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Simplified form data with only essential fields for quick signup
   const [formData, setFormData] = useState({
     sellerName: '',
+    sellerBio: '',
     location: 'Boston, MA',
+    contactEmail: '',
+    contactPhone: '',
+    sellerType: 'individual'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -32,11 +35,12 @@ const SellerSignupPage = () => {
       
       setUser(data);
       
-      // Pre-fill form with user data if available - simplified for incremental onboarding
+      // Pre-fill form with user data if available
       if (data.profile) {
         setFormData(prev => ({
           ...prev,
           sellerName: data.profile.full_name || '',
+          contactEmail: data.email || '',
           location: data.profile.location || 'Boston, MA'
         }));
       }
@@ -67,8 +71,7 @@ const SellerSignupPage = () => {
       
       // 2. Get a Stripe Connect onboarding URL
       // Use simple query params instead of auth headers to avoid size issues
-      // Connect to our clean server on port 3002
-      const apiUrl = `http://localhost:3002/api/v1/stripe/connect/onboard?userId=${encodeURIComponent(user.id)}`;
+      const apiUrl = `/api/v1/stripe/connect/onboard?userId=${encodeURIComponent(user.id)}`;
       
       // Use minimal fetch with no credentials
       const response = await fetch(apiUrl, {
@@ -80,13 +83,7 @@ const SellerSignupPage = () => {
       // Handle errors
       if (!response.ok) {
         const errorData = await response.json();
-        
-        // Special handling for the Connect not enabled error
-        if (errorData.message && errorData.message.includes('signed up for Connect')) {
-          throw new Error("Stripe Connect needs to be enabled for this account. Please contact the site administrator.");
-        } else {
-          throw new Error(errorData.message || `Server error: ${response.status}`);
-        }
+        throw new Error(errorData.message || `Server error: ${response.status}`);
       }
       
       // Get the onboarding URL
@@ -130,34 +127,21 @@ const SellerSignupPage = () => {
           
           {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md mb-6">
-              <p className="font-bold text-lg">You're ready to start selling!</p>
-              <p className="mt-2">Your seller account has been created and you can start listing tools immediately.</p>
+              <p className="font-bold text-lg">Your seller account has been created!</p>
+              <p className="mt-2">To complete your onboarding, please click the button below:</p>
               
-              <div className="mt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <a 
-                      href="/listtool" 
-                      className="block w-full text-center py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 text-lg font-medium"
-                    >
-                      List Your First Tool
-                    </a>
-                  </div>
-                  <div>
-                    <a 
-                      href={stripeUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block w-full text-center py-3 bg-white border border-forest-700 text-forest-700 rounded-md hover:bg-forest-50 text-lg font-medium"
-                    >
-                      Set Up Payments →
-                    </a>
-                  </div>
-                </div>
+              <div className="mt-6 text-center">
+                <a 
+                  href={stripeUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block bg-forest-700 text-white px-6 py-3 rounded-md hover:bg-forest-800 text-lg font-medium"
+                >
+                  Continue to Stripe Connect Setup →
+                </a>
                 
-                <p className="text-sm text-stone-600 text-center">
-                  You'll need to set up payments before you can receive funds from sales.
-                  <br />This can be done now or later.
+                <p className="mt-4 text-sm text-stone-600">
+                  This will open a secure Stripe page where you can complete your seller verification.
                 </p>
               </div>
             </div>
@@ -182,6 +166,38 @@ const SellerSignupPage = () => {
               </div>
               
               <div>
+                <label className="block text-stone-700 font-medium mb-1" htmlFor="sellerType">
+                  Seller Type*
+                </label>
+                <select
+                  id="sellerType"
+                  name="sellerType"
+                  value={formData.sellerType}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+                  required
+                >
+                  <option value="individual">Individual</option>
+                  <option value="business">Business</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-stone-700 font-medium mb-1" htmlFor="sellerBio">
+                  About You
+                </label>
+                <textarea
+                  id="sellerBio"
+                  name="sellerBio"
+                  value={formData.sellerBio}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+                  rows="4"
+                ></textarea>
+                <p className="text-sm text-stone-500 mt-1">Tell buyers about yourself and your tools</p>
+              </div>
+              
+              <div>
                 <label className="block text-stone-700 font-medium mb-1" htmlFor="location">
                   Location*
                 </label>
@@ -199,7 +215,36 @@ const SellerSignupPage = () => {
                   <option value="Medford, MA">Medford, MA</option>
                   <option value="Brookline, MA">Brookline, MA</option>
                 </select>
-                <p className="text-sm text-stone-500 mt-1">Where your tools are available</p>
+              </div>
+              
+              <div>
+                <label className="block text-stone-700 font-medium mb-1" htmlFor="contactEmail">
+                  Contact Email*
+                </label>
+                <input
+                  type="email"
+                  id="contactEmail"
+                  name="contactEmail"
+                  value={formData.contactEmail}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-stone-700 font-medium mb-1" htmlFor="contactPhone">
+                  Contact Phone
+                </label>
+                <input
+                  type="tel"
+                  id="contactPhone"
+                  name="contactPhone"
+                  value={formData.contactPhone}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:border-forest-700"
+                />
+                <p className="text-sm text-stone-500 mt-1">Optional, but helps with local pickup</p>
               </div>
               
               <div className="pt-4">
@@ -208,11 +253,8 @@ const SellerSignupPage = () => {
                   className="w-full py-3 bg-forest-700 text-white rounded-md hover:bg-forest-800 font-medium"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Setting up...' : 'Start Selling Now'}
+                  {isSubmitting ? 'Setting up...' : 'Start Selling'}
                 </button>
-                <p className="text-center text-sm text-stone-500 mt-2">
-                  You can start listing your tools right away
-                </p>
               </div>
             </div>
           </form>}

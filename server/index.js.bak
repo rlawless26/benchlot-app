@@ -1,0 +1,375 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const http = require('http');
+const crypto = require('crypto');
+const stripeApi = require('./api/stripe');
+const helmet = require('helmet'); // You'll need to install this: npm install helmet
+require('dotenv').config();
+
+// Increase Node.js header size limits
+http.maxHeaderSize = 128 * 1024; // Set max header size to 128KB
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Simple request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
+// Note: Previously had complex cookie management middleware here.
+// Now handled in clean-server.js with a more straightforward approach.
+
+// CORS middleware
+app.use((req, res, next) => {
+  // Simplified CORS setup
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  
+  // Handle OPTIONS requests immediately
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Content Security Policy using Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://*.stripe.network",
+        "https://*.hs-scripts.com",
+        "http://*.hs-scripts.com",
+        "'unsafe-inline'",
+        "blob:"
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://*.stripe.com",
+        "https://fonts.googleapis.com",
+        "https://p.typekit.net",
+        "https://use.typekit.net"
+      ],
+      connectSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://api.stripe.com",
+        "https://r.stripe.com",
+        "https://m.stripe.com",
+        "https://*.supabase.co",
+        "https://hooks.stripe.com",
+        "https://js.stripe.com",
+        "https://checkout.stripe.com"
+      ],
+      frameSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://*.stripe.network",
+        "https://connect.stripe.com",
+        "https://checkout.stripe.com"
+      ],
+      imgSrc: [
+        "'self'",
+        "https://*.stripe.com",
+        "https://*.supabase.co",
+        "data:",
+        "https://js.stripe.com"
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com",
+        "https://use.typekit.net"
+      ]
+    }
+  }
+}));
+
+// Set custom limits to avoid "Request Header Fields Too Large" errors
+const jsonParserWithLimits = express.json({
+  limit: '50mb',  // Body size limit
+  parameterLimit: 100000,  // Parameter limit
+  verify: (req, res, buf) => {
+    try {
+      JSON.parse(buf);
+    } catch (e) {
+      console.error('Invalid JSON:', e);
+      throw new Error('Invalid JSON');
+    }
+  }
+});
+
+// Middleware for parsing JSON (except for webhook endpoint)
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/stripe/webhooks') {
+    next();
+  } else {
+    jsonParserWithLimits(req, res, (err) => {
+      if (err) {
+        console.error('Error parsing request:', err);
+        return res.status(400).json({ error: 'Bad request', details: err.message });
+      }
+      next();
+    });
+  }
+});
+
+// Add URL-encoded parser with increased limits
+app.use(express.urlencoded({ 
+  limit: '50mb', 
+  extended: true,
+  parameterLimit: 100000
+}));
+
+// Add custom error handler for large header errors
+app.use((err, req, res, next) => {
+  if (err && err.type === 'request.aborted') {
+    console.error('Request aborted:', err);
+    return res.status(413).json({ error: 'Payload too large' });
+  }
+  next(err);
+});
+
+// API routes
+app.use('/api/stripe', stripeApi);
+
+// Serve static assets if in production
+if (process.env.NODE_ENV === 'production') {
+  // Set static folder
+  app.use(express.static(path.join(__dirname, '../build')));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../build', 'index.html'));
+  });
+}
+
+// Root endpoint (for API health check)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'Benchlot API is running' });
+});
+
+// Special endpoint for minimal Stripe testing (completely bypasses all normal authentication)
+app.get('/minimal-stripe-connect', async (req, res) => {
+  try {
+    const stripe = require('./utils/stripe');
+    console.log('Using minimal Stripe Connect endpoint with zero authentication...');
+    
+    // Create a test account
+    const testAccount = await stripe.accounts.create({
+      type: 'express',
+      email: 'test@example.com',
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      }
+    });
+    
+    console.log('Created test account:', testAccount.id);
+    
+    // Create an account link
+    const accountLink = await stripe.accountLinks.create({
+      account: testAccount.id,
+      refresh_url: `${process.env.FRONTEND_URL}/seller/onboarding?refresh=true`,
+      return_url: `${process.env.FRONTEND_URL}/seller/dashboard`,
+      type: 'account_onboarding',
+    });
+    
+    console.log('Redirecting directly to Stripe:', accountLink.url);
+    
+    // Redirect directly to Stripe
+    return res.redirect(accountLink.url);
+  } catch (error) {
+    console.error('Error in minimal Stripe Connect endpoint:', error);
+    res.status(500).send(`Error: ${error.message}`);
+  }
+});
+
+// Normal token-based redirect
+app.get('/stripe-onboarding/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const stripe = require('./utils/stripe');
+    const { supabase } = require('./utils/supabaseClient');
+    
+    console.log('Processing onboarding redirect with token:', token);
+    
+    // Look up the token
+    const { data, error } = await supabase
+      .from('stripe_tokens')
+      .select('stripe_account_id, user_id')
+      .eq('token', token)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+    
+    if (error || !data) {
+      console.error('Token lookup error or token expired:', error || 'No data found');
+      return res.status(404).send('Invalid or expired token. Please try again.');
+    }
+    
+    console.log('Found valid token for account:', data.stripe_account_id);
+    
+    // Create an account link for onboarding
+    const accountLink = await stripe.accountLinks.create({
+      account: data.stripe_account_id,
+      refresh_url: `${process.env.FRONTEND_URL}/seller/onboarding?refresh=true`,
+      return_url: `${process.env.FRONTEND_URL}/seller/dashboard`,
+      type: 'account_onboarding',
+    });
+    
+    console.log('Created account link, redirecting to:', accountLink.url);
+    
+    // Mark token as used
+    await supabase
+      .from('stripe_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('token', token);
+    
+    // Directly redirect to Stripe
+    return res.redirect(accountLink.url);
+    
+  } catch (error) {
+    console.error('Error in token redirect:', error);
+    res.status(500).send(`
+      <html>
+        <head><title>Error</title></head>
+        <body>
+          <h1>Error creating Stripe account link</h1>
+          <p>${error.message}</p>
+          <a href="/seller/signup">Go back to signup</a>
+        </body>
+      </html>
+    `);
+  }
+});
+
+// Clean implementation is in server/clean-server.js
+// To use it, run: npm run clean-server
+
+// Normal Express endpoint as fallback
+// Note: Temporary minimal-link endpoint removed
+// Clean implementation is in server/clean-server.js
+
+// Add a minimal account status endpoint as well
+app.get('/api/stripe/account-status-minimal', async (req, res) => {
+  try {
+    // Get user ID from query parameter
+    const userId = req.query.userId;
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        error: 'Missing parameter', 
+        details: 'userId is required as a query parameter' 
+      });
+    }
+    
+    console.log('[MINIMAL-STATUS] Checking status for user:', userId);
+    
+    // Import directly
+    const stripe = require('./utils/stripe');
+    const { supabase } = require('./utils/supabaseClient');
+    
+    // Get the user's Stripe account ID
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('stripe_account_id')
+      .eq('id', userId)
+      .single();
+      
+    if (userError || !user.stripe_account_id) {
+      return res.status(400).json({ error: 'User not found or no Stripe account' });
+    }
+    
+    // Check the account status in Stripe
+    const account = await stripe.accounts.retrieve(user.stripe_account_id);
+    
+    // Determine if the account is fully onboarded
+    const isOnboarded = 
+      account.details_submitted && 
+      account.charges_enabled && 
+      account.payouts_enabled;
+    
+    // Match the status to your database schema's constraints
+    const accountStatus = isOnboarded ? 'verified' : 'pending';
+    
+    // Update the user record with the current status
+    await supabase
+      .from('users')
+      .update({
+        stripe_account_status: accountStatus,
+        stripe_account_details_submitted: account.details_submitted,
+        is_seller: isOnboarded
+      })
+      .eq('id', userId);
+    
+    // Return just the essential status info with minimal headers
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    
+    return res.json({ 
+      accountId: account.id,
+      detailsSubmitted: account.details_submitted,
+      chargesEnabled: account.charges_enabled,
+      payoutsEnabled: account.payouts_enabled,
+      status: accountStatus
+    });
+    
+  } catch (error) {
+    console.error('[MINIMAL-STATUS] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Custom logic for Stripe minimal endpoints
+app.use((req, res, next) => {
+  // Only for our minimal endpoints
+  if (req.path === '/api/stripe/minimal-link' || req.path === '/api/stripe/account-status-minimal') {
+    console.log(`[MINIMAL] Processing request to ${req.path}`);
+    
+    // Remove cookies and unnecessary headers
+    delete req.headers.cookie;
+    
+    // Keep only essential headers
+    const essentialHeaders = {
+      'host': req.headers.host,
+      'accept': req.headers.accept,
+      'user-agent': 'MinimalClient'
+    };
+    
+    // Replace all headers with minimal set
+    req.headers = essentialHeaders;
+  }
+  next();
+});
+
+// Create server explicitly with custom settings
+const server = http.createServer({
+  maxHeaderSize: 128 * 1024, // 128KB header size limit for normal requests
+  headersTimeout: 65000, // 65 seconds to receive headers
+  requestTimeout: 120000, // 2 minutes for the entire request
+  keepAliveTimeout: 65000 // slightly more than 60 seconds
+}, app);
+
+// Start the server with custom error handling
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Server max header size: ${http.maxHeaderSize / 1024}KB`);
+});
+
+// Add error handler for the server
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  if (error.code === 'HPE_HEADER_OVERFLOW') {
+    console.error('Header overflow error - try increasing maxHeaderSize');
+  }
+});
