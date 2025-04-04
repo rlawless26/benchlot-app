@@ -1,255 +1,97 @@
-import sgMail from '@sendgrid/mail';
+// Client-side email service that forwards requests to the server
+// This avoids importing SendGrid directly in the client code
 
-// Initialize SendGrid with API key
-sgMail.setApiKey(process.env.REACT_APP_SENDGRID_API_KEY);
+// Base API URL - adjust this as needed for your environment
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? '/api/email' 
+  : 'http://localhost:3001/api/email';
 
-// Base email sender function
-const sendEmail = async (to, templateId, dynamicTemplateData, from = 'notifications@benchlot.com') => {
-  const msg = {
-    to,
-    from,
-    templateId,
-    dynamicTemplateData,
-  };
-  
+// Generic request helper function
+const sendRequest = async (endpoint, data) => {
   try {
-    await sgMail.send(msg);
-    console.log(`Email sent to ${to} using template ${templateId}`);
+    const response = await fetch(`${API_URL}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to send email');
+    }
+    
     return { success: true };
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error(`Error in ${endpoint}:`, error);
     return { success: false, error };
   }
 };
 
-// Template IDs - actual template IDs from SendGrid
-const TEMPLATE_IDS = {
-  VERIFICATION: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  PASSWORD_RESET: 'd-7d448b96ded74ce0a278267611e7ac4c',
-  ACCOUNT_CREATION: 'd-280057e931044ee2ac3cce7d54a216e3',
-  LISTING_PUBLISHED: 'd-55c66b37ad7243c4a2a0ee6630b01922',
-  MESSAGE_RECEIVED: 'd-0f5098870f9b45b695e9d63274c65e54',
-  OFFER_RECEIVED: 'd-daa56a7c83dd49cc9ad18f47db974f11',
-  PRODUCT_SOLD: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  SHIP_REMINDER: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  PAYOUT_PROCESSED: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  ORDER_CONFIRMATION: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  PAYMENT_CONFIRMATION: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  SHIPPING_CONFIRMATION: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  MESSAGE_SENT: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  OFFER_UPDATE: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-};
-
 // Authentication Emails
 export const sendVerificationEmail = (to, verificationLink) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.VERIFICATION, 
-    { 
-      verification_link: verificationLink,
-      username: to.split('@')[0] // Simple username extraction
-    }
-  );
+  return sendRequest('verification', { 
+    email: to, 
+    verificationLink 
+  });
 };
 
 export const sendPasswordResetEmail = (to, resetLink) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.PASSWORD_RESET, 
-    { 
-      reset_link: resetLink,
-      username: to.split('@')[0]
-    }
-  );
+  return sendRequest('password-reset', { 
+    email: to, 
+    resetLink 
+  });
 };
 
 export const sendAccountCreationEmail = (to, firstName) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.ACCOUNT_CREATION, 
-    { 
-      first_name: firstName || to.split('@')[0],
-      login_link: `${process.env.REACT_APP_FRONTEND_URL}/login`
-    }
-  );
+  return sendRequest('account-creation', { 
+    email: to, 
+    firstName: firstName || to.split('@')[0]
+  });
 };
 
 // Seller Emails
 export const sendListingPublishedEmail = (to, listingDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.LISTING_PUBLISHED, 
-    { 
-      listing_title: listingDetails.title,
-      listing_price: listingDetails.price,
-      listing_image: listingDetails.image,
-      listing_url: `${process.env.REACT_APP_FRONTEND_URL}/tool/${listingDetails.id}`
+  return sendRequest('listing-published', {
+    email: to,
+    listingDetails: {
+      title: listingDetails.title,
+      price: listingDetails.price,
+      image: listingDetails.image,
+      id: listingDetails.id
     }
-  );
+  });
 };
 
 export const sendMessageReceivedEmail = (to, messageDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.MESSAGE_RECEIVED, 
-    { 
-      sender_name: messageDetails.senderName,
-      message_preview: messageDetails.messageText.substring(0, 100) + (messageDetails.messageText.length > 100 ? '...' : ''),
-      message_url: `${process.env.REACT_APP_FRONTEND_URL}/messages?contact=${messageDetails.senderId}`
+  return sendRequest('message-received', {
+    email: to,
+    messageDetails: {
+      senderName: messageDetails.senderName,
+      messageText: messageDetails.messageText,
+      senderId: messageDetails.senderId
     }
-  );
+  });
 };
 
 export const sendOfferReceivedEmail = (to, offerDetails) => {
-  // Calculate discount percentage if both prices are provided
-  let discountPercentage = 0;
-  if (offerDetails.listingPrice && offerDetails.offerAmount) {
-    discountPercentage = Math.round(((offerDetails.listingPrice - offerDetails.offerAmount) / offerDetails.listingPrice) * 100);
-    discountPercentage = Math.max(0, discountPercentage); // Ensure it's not negative
-  }
-
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.OFFER_RECEIVED, 
-    { 
-      buyer_name: offerDetails.buyerName,
-      listing_title: offerDetails.listingTitle,
-      offer_amount: offerDetails.offerAmount,
-      listing_price: offerDetails.listingPrice,
-      discount_percentage: discountPercentage.toString(),
-      offer_url: `${process.env.REACT_APP_FRONTEND_URL}/seller/offers/${offerDetails.offerId}`
+  return sendRequest('offer-received', {
+    email: to,
+    offerDetails: {
+      buyerName: offerDetails.buyerName,
+      listingTitle: offerDetails.listingTitle,
+      offerAmount: offerDetails.offerAmount,
+      listingPrice: offerDetails.listingPrice,
+      offerId: offerDetails.offerId
     }
-  );
-};
-
-export const sendProductSoldEmail = (to, orderDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.PRODUCT_SOLD, 
-    { 
-      buyer_name: orderDetails.buyerName,
-      listing_title: orderDetails.listingTitle,
-      order_amount: orderDetails.orderAmount,
-      order_id: orderDetails.orderId,
-      order_url: `${process.env.REACT_APP_FRONTEND_URL}/seller/orders/${orderDetails.orderId}`
-    }
-  );
-};
-
-export const sendShipReminderEmail = (to, orderDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.SHIP_REMINDER, 
-    { 
-      buyer_name: orderDetails.buyerName,
-      listing_title: orderDetails.listingTitle,
-      order_id: orderDetails.orderId,
-      days_elapsed: orderDetails.daysElapsed,
-      order_url: `${process.env.REACT_APP_FRONTEND_URL}/seller/orders/${orderDetails.orderId}`
-    }
-  );
-};
-
-export const sendPayoutProcessedEmail = (to, payoutDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.PAYOUT_PROCESSED, 
-    { 
-      payout_amount: payoutDetails.amount,
-      bank_account: payoutDetails.bankLast4,
-      estimated_arrival: payoutDetails.estimatedArrival,
-      transaction_id: payoutDetails.transactionId,
-      earnings_url: `${process.env.REACT_APP_FRONTEND_URL}/seller/earnings`
-    }
-  );
-};
-
-// Buyer Emails
-export const sendOrderConfirmationEmail = (to, orderDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.ORDER_CONFIRMATION, 
-    { 
-      order_id: orderDetails.orderId,
-      listing_title: orderDetails.listingTitle,
-      order_amount: orderDetails.orderAmount,
-      seller_name: orderDetails.sellerName,
-      estimated_shipping: orderDetails.estimatedShipping,
-      order_url: `${process.env.REACT_APP_FRONTEND_URL}/orders/${orderDetails.orderId}`
-    }
-  );
-};
-
-export const sendPaymentConfirmationEmail = (to, paymentDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.PAYMENT_CONFIRMATION, 
-    { 
-      order_id: paymentDetails.orderId,
-      payment_amount: paymentDetails.amount,
-      payment_method: paymentDetails.paymentMethod,
-      order_url: `${process.env.REACT_APP_FRONTEND_URL}/orders/${paymentDetails.orderId}`
-    }
-  );
-};
-
-export const sendShippingConfirmationEmail = (to, shippingDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.SHIPPING_CONFIRMATION, 
-    { 
-      order_id: shippingDetails.orderId,
-      listing_title: shippingDetails.listingTitle,
-      tracking_number: shippingDetails.trackingNumber,
-      tracking_url: shippingDetails.trackingUrl,
-      carrier: shippingDetails.carrier,
-      estimated_delivery: shippingDetails.estimatedDelivery,
-      order_url: `${process.env.REACT_APP_FRONTEND_URL}/orders/${shippingDetails.orderId}`
-    }
-  );
-};
-
-export const sendMessageSentEmail = (to, messageDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.MESSAGE_SENT, 
-    { 
-      recipient_name: messageDetails.recipientName,
-      message_preview: messageDetails.messageText.substring(0, 100) + (messageDetails.messageText.length > 100 ? '...' : ''),
-      message_url: `${process.env.REACT_APP_FRONTEND_URL}/messages?contact=${messageDetails.recipientId}`
-    }
-  );
-};
-
-export const sendOfferUpdateEmail = (to, offerDetails) => {
-  return sendEmail(
-    to, 
-    TEMPLATE_IDS.OFFER_UPDATE, 
-    { 
-      seller_name: offerDetails.sellerName,
-      listing_title: offerDetails.listingTitle,
-      offer_status: offerDetails.status, // 'accepted' or 'rejected'
-      offer_amount: offerDetails.offerAmount,
-      counter_offer: offerDetails.counterOffer,
-      next_steps: offerDetails.status === 'accepted' ? 'Proceed to checkout' : 'View other listings',
-      action_url: offerDetails.status === 'accepted' ? 
-        `${process.env.REACT_APP_FRONTEND_URL}/checkout/${offerDetails.listingId}` : 
-        `${process.env.REACT_APP_FRONTEND_URL}/marketplace`
-    }
-  );
+  });
 };
 
 // Test function for verifying email setup
 export const sendTestEmail = (to) => {
-  return sendEmail(
-    to,
-    TEMPLATE_IDS.ACCOUNT_CREATION, // Use any template you've created
-    {
-      first_name: 'Test User',
-      login_link: `${process.env.REACT_APP_FRONTEND_URL}/login`
-    },
-    'notifications@benchlot.com' // Explicitly set the sender email
-  );
+  return sendRequest('test', { email: to });
 };
 
 export default {
@@ -259,13 +101,5 @@ export default {
   sendListingPublishedEmail,
   sendMessageReceivedEmail,
   sendOfferReceivedEmail,
-  sendProductSoldEmail,
-  sendShipReminderEmail,
-  sendPayoutProcessedEmail,
-  sendOrderConfirmationEmail,
-  sendPaymentConfirmationEmail,
-  sendShippingConfirmationEmail,
-  sendMessageSentEmail,
-  sendOfferUpdateEmail,
-  sendTestEmail // Useful for testing
+  sendTestEmail
 };

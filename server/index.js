@@ -4,6 +4,7 @@ const path = require('path');
 const http = require('http');
 const crypto = require('crypto');
 const stripeApi = require('./api/stripe');
+const emailApi = require('./api/email');
 const helmet = require('helmet'); // You'll need to install this: npm install helmet
 require('dotenv').config();
 
@@ -140,6 +141,7 @@ app.use((err, req, res, next) => {
 
 // API routes
 app.use('/api/stripe', stripeApi);
+app.use('/api/email', emailApi);
 
 // Serve static assets if in production
 if (process.env.NODE_ENV === 'production') {
