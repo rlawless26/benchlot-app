@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Check, XCircle, MapPin } from 'lucide-react';
+import { getToolImage } from '../utils/imageUtils';
 
 const WishlistToolCard = ({ tool, onRemove }) => {
   // Format price with $ and commas
@@ -27,21 +28,11 @@ const WishlistToolCard = ({ tool, onRemove }) => {
     <div className="bg-white rounded-lg overflow-hidden shadow-md transition-transform hover:shadow-lg">
       <Link to={`/tool/${tool.id}`} className="block relative">
         <div className="h-48 bg-stone-100">
-          {tool.images && tool.images.length > 0 ? (
-            <img 
-              src={tool.images[0]} 
-              alt={tool.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = '/api/placeholder/300/200';
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-stone-400">
-              No image available
-            </div>
-          )}
+          <img 
+            src={getToolImage(tool, 0, 300, 200)}
+            alt={tool.name || "Tool image"}
+            className="w-full h-full object-cover"
+          />
           
           {/* Badges */}
           <div className="absolute top-2 right-2 flex flex-col gap-1">

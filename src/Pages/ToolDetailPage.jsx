@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getToolImage } from '../utils/imageUtils';
 import {
   Heart,
   Share,
@@ -343,8 +344,8 @@ const handleMakeOffer = () => {
           <div className="flex items-center mb-6">
             <div className="w-16 h-16 bg-stone-100 rounded overflow-hidden">
               <img
-                src={tool.images?.[0] || '/api/placeholder/80/80'}
-                alt={tool.name}
+                src={getToolImage(tool, 0, 80, 80)}
+                alt={tool.name || "Tool image"}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -520,14 +521,9 @@ const handleMakeOffer = () => {
             <div className="bg-white rounded-lg overflow-hidden shadow-md relative">
               {tool.images && tool.images.length > 0 ? (
                 <img
-                  src={tool.images[activeImageIndex] || '/api/placeholder/400/300'}
-                  alt={tool.name}
+                  src={getToolImage(tool, activeImageIndex, 400, 300)}
+                  alt={tool.name || "Tool image"}
                   className="w-full h-96 object-contain"
-                  onError={(e) => {
-                    console.log("Image failed to load:", tool.images[activeImageIndex]);
-                    e.target.onerror = null; // Prevent infinite error loop
-                    e.target.src = '/api/placeholder/400/300'; // Fallback image
-                  }}
                 />
               ) : (
                 <div className="w-full h-96 bg-stone-100 flex items-center justify-center">
@@ -572,13 +568,9 @@ const handleMakeOffer = () => {
                     onClick={() => setActiveImageIndex(index)}
                   >
                     <img
-                      src={image}
-                      alt={`${tool.name} thumbnail ${index + 1}`}
+                      src={image || getToolImage(tool, index, 80, 80)}
+                      alt={`${tool.name || "Tool"} thumbnail ${index + 1}`}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/api/placeholder/80/80';
-                      }}
                     />
                   </button>
                 ))}
@@ -800,13 +792,9 @@ const handleMakeOffer = () => {
                   <a href={`/tool/${similarTool.id}`} className="block">
                     <div className="relative h-48">
                       <img
-                        src={similarTool.images?.[0] || '/api/placeholder/300/200'}
-                        alt={similarTool.name}
+                        src={getToolImage(similarTool, 0, 300, 200)}
+                        alt={similarTool.name || "Similar tool"}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/api/placeholder/300/200';
-                        }}
                       />
                     </div>
                     <div className="p-4">

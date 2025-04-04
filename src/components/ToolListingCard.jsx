@@ -1,12 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Star, MapPin, Check } from 'lucide-react';
+import { getToolImage } from '../utils/imageUtils';
 
 const ToolListingCard = ({ tool, featured = false }) => {
   // Handle missing images by using a placeholder
-  const mainImage = tool.images && tool.images.length > 0 
-    ? tool.images[0] 
-    : '/api/placeholder/300/200';
+  const mainImage = getToolImage(tool, 0, 300, 200);
   
   // Format the price
   const formatPrice = (price) => {
