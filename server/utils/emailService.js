@@ -24,6 +24,10 @@ const TEMPLATE_IDS = {
 
 // Base email sender function
 const sendEmail = async (to, templateId, dynamicTemplateData, from = 'notifications@benchlot.com') => {
+  console.log(`Attempting to send email to ${to} using template ${templateId}`);
+  console.log('Template data:', JSON.stringify(dynamicTemplateData));
+  console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+  
   const msg = {
     to,
     from,
@@ -32,11 +36,13 @@ const sendEmail = async (to, templateId, dynamicTemplateData, from = 'notificati
   };
   
   try {
-    await sgMail.send(msg);
-    console.log(`Email sent to ${to} using template ${templateId}`);
+    const response = await sgMail.send(msg);
+    console.log(`Email sent successfully to ${to} using template ${templateId}`);
+    console.log('SendGrid response:', response[0].statusCode);
     return { success: true };
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('SendGrid email error:', error.toString());
+    console.error('Error details:', error.response ? JSON.stringify(error.response.body) : 'No response details');
     return { success: false, error };
   }
 };

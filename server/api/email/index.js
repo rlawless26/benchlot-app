@@ -51,20 +51,27 @@ router.post('/listing-published', async (req, res) => {
   try {
     const { email, listingDetails } = req.body;
     
+    console.log('Received listing-published request:', {
+      email,
+      listingDetails
+    });
+    
     if (!email || !listingDetails) {
+      console.log('Missing required fields for listing-published email');
       return res.status(400).json({ error: 'Email and listing details are required' });
     }
     
     const result = await emailService.sendListingPublishedEmail(email, listingDetails);
+    console.log('sendListingPublishedEmail result:', result);
     
     if (result.success) {
       return res.status(200).json({ message: 'Listing published email sent successfully' });
     } else {
-      return res.status(500).json({ error: 'Failed to send listing published email' });
+      return res.status(500).json({ error: 'Failed to send listing published email', details: result.error });
     }
   } catch (error) {
     console.error('Error sending listing published email:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
@@ -130,6 +137,22 @@ router.post('/test', async (req, res) => {
     }
   } catch (error) {
     console.error('Error sending test email:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Test endpoint for verifying API connectivity
+router.get('/test-connection', async (req, res) => {
+  try {
+    return res.status(200).json({
+      message: 'Email API endpoint is working',
+      environment: process.env.NODE_ENV,
+      sendgridApiKey: !!process.env.SENDGRID_API_KEY,
+      frontendUrl: process.env.FRONTEND_URL || 'Not set',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error in test endpoint:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

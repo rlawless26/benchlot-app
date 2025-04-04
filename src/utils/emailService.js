@@ -1,10 +1,8 @@
 // Client-side email service that forwards requests to the server
 // This avoids importing SendGrid directly in the client code
 
-// Base API URL - adjust this as needed for your environment
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? '/api/email' 
-  : 'http://localhost:3001/api/email';
+// Base API URL - use relative path for both environments for consistency
+const API_URL = '/api/email';
 
 // Generic request helper function
 const sendRequest = async (endpoint, data) => {
