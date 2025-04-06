@@ -38,6 +38,12 @@
   --transition-default: all 0.2s ease-in-out;
 }
 
+/* Remove any unwanted feature badges */
+header .absolute:not(.group-hover\:block):not([class*="dropdown"]):not([class*="cart"]),
+header [class*="badge"] {
+  display: none !important;
+}
+
 /* Header Styles */
 .main-header {
   padding: 1.5em 0 1.5em 0;
