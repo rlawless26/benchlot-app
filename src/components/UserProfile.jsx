@@ -7,10 +7,11 @@ import {
   Check,
   MessageSquare,
   User,
-  Tool,
+  Hammer,
   Edit,
   Loader,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from 'lucide-react';
 
 // Import Supabase client and helpers
@@ -465,29 +466,21 @@ const UserProfile = () => {
                   </div>
                 )}
 
-                <div className="pt-6 border-t">
-                  <h3 className="font-medium text-lg mb-4">Your Listings</h3>
-                  {userListings && userListings.length > 0 ? (
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {userListings.map(listing => (
-                        <div key={listing.id} className="border rounded-md p-4">
-                          <p className="font-medium">{listing.name}</p>
-                          <p className="text-stone-600">${listing.current_price}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-stone-500">You haven't listed any tools yet.</p>
-                  )}
-                </div>
-
-                <div className="flex justify-end mt-6">
+                <div className="flex justify-end mt-6 space-x-4">
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800"
+                    className="px-4 py-2 bg-forest-700 text-white rounded-md hover:bg-forest-800 flex items-center"
                   >
+                    <Edit className="h-4 w-4 mr-2" />
                     Edit Profile
                   </button>
+                  <Link 
+                    to="/settings" 
+                    className="px-4 py-2 bg-stone-100 text-stone-700 rounded-md hover:bg-stone-200 flex items-center"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Full Account Settings
+                  </Link>
                 </div>
               </div>
             )) : (
@@ -549,26 +542,17 @@ const UserProfile = () => {
                   </div>
                 )}
 
-                {/* Other user's listings */}
+                {/* Link to user's marketplace listings */}
                 <div className="pt-6 border-t">
-                  <h3 className="font-medium text-lg mb-4">
-                    {profile.username || 'User'}'s Listings
-                  </h3>
-                  
-                  {userListings && userListings.length > 0 ? (
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {userListings.map(listing => (
-                        <div key={listing.id} className="border rounded-md p-4">
-                          <Link to={`/tool/${listing.id}`} className="font-medium hover:text-forest-700">
-                            {listing.name}
-                          </Link>
-                          <p className="text-stone-600">${listing.current_price}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-stone-500">This user hasn't listed any tools yet.</p>
-                  )}
+                  <div className="flex justify-center mt-4">
+                    <Link 
+                      to={`/marketplace?seller=${profile.id}`}
+                      className="px-4 py-2 bg-forest-50 text-forest-700 border border-forest-200 rounded-md hover:bg-forest-100 flex items-center"
+                    >
+                      <Hammer className="h-4 w-4 mr-2" />
+                      View {profile.username || 'User'}'s Listings in Marketplace
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Contact button for other users - Using MessageBanner component */}

@@ -38,10 +38,16 @@
   --transition-default: all 0.2s ease-in-out;
 }
 
-/* Remove any unwanted feature badges */
-header .absolute:not(.group-hover\:block):not([class*="dropdown"]):not([class*="cart"]),
-header [class*="badge"] {
+/* Remove any unwanted feature badges while preserving dropdowns */
+header .absolute:not(.group-hover\:block):not([class*="dropdown"]):not([class*="cart"]):not(#profile-dropdown),
+header [class*="badge"]:not([class*="cart"]) {
   display: none !important;
+}
+
+/* Ensure profile dropdown is always visible when open */
+#profile-dropdown {
+  display: block !important;
+  z-index: 100;
 }
 
 /* Header Styles */

@@ -15,7 +15,24 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Supabase configuration is missing');
 }
 
+// Log environment in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('Server Supabase URL:', supabaseUrl ? 'Set' : 'Missing');
+  console.log('Server Supabase Key:', supabaseKey ? `Set (${supabaseKey.substring(0, 10)}...)` : 'Missing');
+}
+
 // Create a single supabase client for interacting with your database
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  },
+  global: {
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "*/*",
+    },
+  },
+});
 
 module.exports = { supabase };

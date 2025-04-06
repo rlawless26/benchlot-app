@@ -235,8 +235,11 @@ const Header = () => {
                   {/* User Profile Dropdown */}
                   <div className="relative">
                     <button
-                      className="text-stone-700 hover:text-forest-700 relative"
+                      className="text-stone-700 hover:text-forest-700 hover:bg-forest-50 relative cursor-pointer p-1 rounded-full flex items-center"
                       onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                      aria-label="Open user menu"
+                      aria-expanded={profileMenuOpen}
+                      aria-haspopup="true"
                     >
                       {user.profile?.avatar_url ? (
                         <img
@@ -250,14 +253,18 @@ const Header = () => {
                     </button>
 
                     {profileMenuOpen && (
-                      <div ref={profileMenuRef} className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md p-2 min-w-[200px] z-10">
+                      <div 
+                        ref={profileMenuRef} 
+                        id="profile-dropdown"
+                        className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-md p-2 min-w-[200px] z-[100]"
+                      >
                         <div className="px-4 py-2 text-sm font-medium text-stone-700 border-b">
                           {user.profile?.username || user.email}
                         </div>
 
                         <Link to="/profile/me" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 text-sm">
                           <User className="h-4 w-4" />
-                          My Profile
+                          View Profile
                         </Link>
 
                         <Link to="/seller/listings" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 text-sm">
@@ -277,7 +284,7 @@ const Header = () => {
 
                         <Link to="/settings" className="flex items-center gap-3 w-full text-left px-4 py-2 text-stone-700 hover:bg-forest-50 hover:text-forest-700 text-sm">
                           <Settings className="h-4 w-4" />
-                          Settings
+                          Account Settings
                         </Link>
 
                         <div className="border-t my-1"></div>
@@ -398,7 +405,7 @@ const Header = () => {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <User className="h-5 w-5" />
-                      My Profile
+                      View Profile
                     </Link>
                     <Link 
                       to="/seller/listings" 

@@ -86,6 +86,21 @@ SENDGRID_API_KEY=<sendgrid-api-key>
 FRONTEND_URL=http://localhost:3000
 ```
 
+## Key Variable Separation: Client vs. Server
+
+It's important to understand which variables belong in which environment file:
+
+### Server-Only Variables (in server/.env)
+- **SendGrid API Keys**: Email delivery happens only on the server side, so `SENDGRID_API_KEY` should only be in `server/.env`
+- **Supabase Service Key**: Has admin privileges and should never be exposed to the client
+- **Stripe Secret Key**: Must remain confidential and only used server-side
+- **Webhook Secrets**: Used to verify incoming webhook requests
+
+### Client-Side Variables (in .env.local)
+- **Supabase Anon Key**: Limited permissions suitable for client usage
+- **Stripe Publishable Key**: Specifically designed to be safe for client-side use
+- **Public URLs**: Connection points for your frontend to reach APIs
+
 ## Production Variables (in Vercel)
 
 When deploying to production, add all these variables to Vercel, changing URL values to point to production.
@@ -97,7 +112,14 @@ If you encounter environment variable issues:
 1. Check if variables are being correctly loaded with console logs
 2. Make sure you're using the correct prefix (`REACT_APP_` for client, no prefix for server)
 3. Restart both client and server with `npm run dev-clean`
+4. Verify you're not missing required variables in each environment file
 
 For Supabase 406 errors:
 - These are typically related to content negotiation and headers
 - Our fix sets proper Accept headers to resolve these issues
+
+For SendGrid Email Issues:
+- Emails are sent from the server side only, not from the client
+- Verify the `SENDGRID_API_KEY` is correctly set in `server/.env`
+- Check server logs for SendGrid API errors
+- Ensure you're using the correct SendGrid template IDs in your code

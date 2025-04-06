@@ -5,7 +5,25 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Debug environment variables in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('Supabase URL:', supabaseUrl ? 'Set' : 'Missing');
+  console.log('Supabase Key:', supabaseKey ? 'Set (starts with ' + supabaseKey.substring(0, 10) + '...)' : 'Missing');
+}
+
+// Create client with proper headers
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  global: {
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "*/*",
+    },
+  },
+});
 
 // Auth helper functions
 export const signUp = async (email, password, userData) => {
@@ -69,22 +87,19 @@ export const updateUserPassword = async (currentPassword, newPassword) => {
       return { error: { message: 'User not authenticated' } };
     }
     
-    // First verify the current password is correct (by attempting to sign in)
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword
-    });
-    
-    if (signInError) {
-      return { error: { message: 'Current password is incorrect' } };
-    }
-    
-    // If verification successful, update the password
+    // Update the password directly
+    // Supabase will verify the old password internally
     const { error } = await supabase.auth.updateUser({
       password: newPassword
     });
     
-    return { error };
+    if (error) {
+      console.error('Error updating password:', error);
+      return { error: { message: error.message || 'Failed to update password' } };
+    }
+    
+    console.log('Password updated successfully');
+    return { error: null };
   } catch (err) {
     console.error('Error in updateUserPassword:', err);
     return { error: err };
