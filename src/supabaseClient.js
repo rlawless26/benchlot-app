@@ -128,76 +128,214 @@ export const getCurrentUser = async () => {
   }
 };
 
-// Auth helper functions
-export const signUp = async (email, password, userData) => {
-  // Step 1: Sign up with email and password
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-  
-  if (authError) return { error: authError };
-  
-  // If auth successful, create a user profile
-  if (authData.user) {
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert({
-        id: authData.user.id,  // This must match the auth.uid
-        username: userData.username,
-        full_name: userData.fullName,
-        location: userData.location || 'Boston, MA',
-        email: email  // Include email in the users table too
-      });
-      
-    if (profileError) return { error: profileError };
+/**
+ * Sign in a user with email and password
+ * @param {string} email - User's email
+ * @param {string} password - User's password
+ * @returns {Object} Auth data or error
+ */
+export const signIn = async (email, password) => {
+  try {
+    console.log(`Attempting to sign in user with email: ${email}`);
     
-    // Send welcome email directly via API
-    try {
-      const response = await fetch(`${config.urls.api}/api/email/account-creation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          firstName: userData.fullName || userData.username
-        }),
-      });
-      
-      // Log the result
-      if (response.ok) {
-        console.log('Welcome email sent to:', email);
-      } else {
-        const result = await response.json();
-        console.error('Error sending welcome email:', result.error);
-      }
-    } catch (emailError) {
-      console.error('Error sending welcome email:', emailError);
-      // Don't return error, as the signup was successful
+    // Input validation
+    if (!email || !password) {
+      return { error: { message: 'Email and password are required' } };
     }
+    
+    // Sign in with email and password
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) {
+      console.error('Sign in error:', error);
+      return { error };
+    }
+    
+    // If we got here, sign in was successful
+    console.log('User signed in successfully');
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in signIn:', error);
+    return { error };
   }
-  
-  return { data: authData };
 };
 
-// For brevity, not including all the other functions that are unchanged
-// In a real implementation, you would update all API endpoints to use the
-// config.urls.api prefix for consistency.
+/**
+ * Send a password reset email to the user
+ * @param {string} email - User's email
+ * @returns {Object} Result of the operation
+ */
+export const resetPassword = async (email) => {
+  try {
+    console.log(`Sending password reset email to: ${email}`);
+    
+    // Validate input
+    if (!email) {
+      return { error: { message: 'Email is required' } };
+    }
+    
+    // Use frontend URL from config for redirect
+    const redirectTo = `${config.urls.frontend}/reset-password`;
+    console.log(`Reset password redirect URL: ${redirectTo}`);
+    
+    // Send the password reset email
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo
+    });
+    
+    if (error) {
+      console.error('Password reset error:', error);
+      return { error };
+    }
+    
+    console.log('Password reset email sent successfully');
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in resetPassword:', error);
+    return { error };
+  }
+};
 
-// Sign out function (since we see it imported in header.jsx)
+/**
+ * Complete password reset process
+ * @param {string} newPassword - New password to set
+ * @returns {Object} Result of the operation
+ */
+export const completePasswordReset = async (newPassword) => {
+  try {
+    console.log('Attempting to complete password reset');
+    
+    // Validate input
+    if (!newPassword || newPassword.length < 6) {
+      return { error: { message: 'New password must be at least 6 characters' } };
+    }
+    
+    // Update the user's password
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    if (error) {
+      console.error('Password update error:', error);
+      return { error };
+    }
+    
+    console.log('Password updated successfully');
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in completePasswordReset:', error);
+    return { error };
+  }
+};
+
+/**
+ * Sign up a new user
+ * @param {string} email - User's email
+ * @param {string} password - User's password
+ * @param {Object} userData - Additional user data
+ * @returns {Object} Auth data or error
+ */
+export const signUp = async (email, password, userData) => {
+  try {
+    console.log(`Attempting to sign up user with email: ${email}`);
+    
+    // Input validation
+    if (!email || !password) {
+      return { error: { message: 'Email and password are required' } };
+    }
+    
+    if (!userData || !userData.username) {
+      return { error: { message: 'Username is required' } };
+    }
+    
+    // Step 1: Sign up with email and password
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    
+    if (authError) {
+      console.error('Sign up auth error:', authError);
+      return { error: authError };
+    }
+    
+    // If auth successful, create a user profile
+    if (authData.user) {
+      console.log(`User authenticated successfully, creating profile for user ID: ${authData.user.id}`);
+      
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,  // This must match the auth.uid
+          username: userData.username,
+          full_name: userData.fullName,
+          location: userData.location || 'Boston, MA',
+          email: email,  // Include email in the users table too
+          created_at: new Date().toISOString(),
+          is_seller: false // Default to not a seller
+        });
+        
+      if (profileError) {
+        console.error('Error creating user profile:', profileError);
+        return { error: profileError };
+      }
+      
+      // Send welcome email directly via API
+      try {
+        const apiUrl = config.urls.api || window.location.origin;
+        const response = await fetch(`${apiUrl}/api/email/account-creation`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email,
+            firstName: userData.fullName || userData.username
+          }),
+        });
+        
+        // Log the result
+        if (response.ok) {
+          console.log('Welcome email sent to:', email);
+        } else {
+          const result = await response.json();
+          console.error('Error sending welcome email:', result.error);
+        }
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't return error, as the signup was successful
+      }
+    }
+    
+    console.log('User sign up completed successfully');
+    return { data: authData };
+  } catch (error) {
+    console.error('Unexpected error in signUp:', error);
+    return { error };
+  }
+};
+
+/**
+ * Sign out the current user
+ * @returns {Object} Result of the operation
+ */
 export const signOut = async () => {
   try {
+    console.log('Signing out user');
     const { error } = await supabase.auth.signOut();
+    
     if (error) {
       console.error('Error signing out:', error);
       return { error };
     }
+    
+    console.log('User signed out successfully');
     return { success: true };
   } catch (error) {
     console.error('Unexpected error in signOut:', error);
     return { error };
   }
 };
-
-// Rest of the file remains the same...
