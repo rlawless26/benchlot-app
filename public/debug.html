@@ -78,7 +78,8 @@
         host: window.location.host,
         protocol: window.location.protocol,
         time: new Date().toISOString(),
-        reactEnv: window.ENV || 'Not available'
+        reactEnv: window.REACT_APP_SUPABASE_URL ? 'React env vars available' : 'React env vars not available',
+        benchlotEnv: window.BENCHLOT_ENV ? 'Benchlot env vars available' : 'Benchlot env vars not available'
       };
       
       envInfo.innerHTML = `<pre>${JSON.stringify(info, null, 2)}</pre>`;
