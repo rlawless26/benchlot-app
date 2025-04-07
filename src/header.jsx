@@ -235,7 +235,7 @@ const Header = () => {
                   {/* User Profile Dropdown */}
                   <div className="relative">
                     <button
-                      className="text-stone-700 hover:text-forest-700 hover:bg-forest-50 relative cursor-pointer p-1 rounded-full flex items-center"
+                      className="text-stone-700 hover:text-forest-700 hover:bg-forest-50 relative cursor-pointer p-1 rounded-full flex items-center justify-center"
                       onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                       aria-label="Open user menu"
                       aria-expanded={profileMenuOpen}
@@ -246,9 +246,16 @@ const Header = () => {
                           src={user.profile.avatar_url}
                           alt={user.profile?.username || 'User avatar'}
                           className="w-8 h-8 rounded-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = 'none';
+                            e.target.parentNode.innerHTML = `<div class="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center">${(user.profile?.username || user.email || 'U').charAt(0).toUpperCase()}</div>`;
+                          }}
                         />
                       ) : (
-                        <User className="h-5 w-5" />
+                        <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center">
+                          {(user.profile?.username || user.email || 'U').charAt(0).toUpperCase()}
+                        </div>
                       )}
                     </button>
 

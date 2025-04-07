@@ -161,8 +161,17 @@ export const CartProvider = ({ children }) => {
     if (existingSessionId) {
       setSessionId(existingSessionId);
     } else {
-      // Generate a new session ID
-      const newSessionId = crypto.randomUUID();
+      // Generate a new session ID (using a Safari-compatible approach)
+      let newSessionId;
+      
+      // Check if crypto.randomUUID is available (not in older Safari)
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        newSessionId = crypto.randomUUID();
+      } else {
+        // Fallback for browsers that don't support randomUUID
+        newSessionId = 'guest-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
+      }
+      
       localStorage.setItem('guestSessionId', newSessionId);
       setSessionId(newSessionId);
     }
