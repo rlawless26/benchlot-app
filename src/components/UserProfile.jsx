@@ -184,12 +184,24 @@ const UserProfile = () => {
     console.log("isCurrentUser state updated:", isCurrentUser);
     console.log("userListings updated:", userListings);
     
-    // Check avatar URL accessibility if available
-    if (profile?.avatar_url) {
-      console.log("Testing avatar URL accessibility:", profile.avatar_url);
-      isUrlAccessible(profile.avatar_url).then(accessible => {
-        console.log(`Avatar URL accessibility test: ${accessible ? 'PASSED' : 'FAILED'}`);
-      });
+    // Only run diagnostic tests in development mode
+    if (process.env.NODE_ENV === 'development') {
+      // Check avatar URL accessibility if available, but skip blob URLs
+      if (profile?.avatar_url && !profile.avatar_url.startsWith('blob:')) {
+        console.log("Testing avatar URL accessibility:", profile.avatar_url);
+        // Wrap in try/catch to prevent any errors from breaking the component
+        try {
+          isUrlAccessible(profile.avatar_url)
+            .then(accessible => {
+              console.log(`Avatar URL accessibility test: ${accessible ? 'PASSED' : 'FAILED'}`);
+            })
+            .catch(err => {
+              console.warn('Avatar accessibility test error:', err);
+            });
+        } catch (error) {
+          console.warn('Error testing avatar URL:', error);
+        }
+      }
     }
   }, [profile, isCurrentUser, userListings]);
 

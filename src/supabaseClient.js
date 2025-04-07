@@ -1486,12 +1486,49 @@ export const fetchCartItems = async (userId) => {
 export const isUrlAccessible = async (url) => {
   if (!url) return false;
   
+  // Don't try to test blob URLs - they'll always fail due to security restrictions
+  if (url.startsWith('blob:')) {
+    console.log(`Skipping accessibility test for blob URL: ${url}`);
+    return true; // Assume blob URLs are accessible
+  }
+  
+  // Only test HTTP/HTTPS URLs
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    console.log(`Skipping accessibility test for non-HTTP URL: ${url}`);
+    return false;
+  }
+  
   try {
-    console.log(`Testing URL accessibility: ${url}`);
-    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-    return true; // If we get here, the request didn't throw
+    // Create an image element to test the URL instead of using fetch
+    // This is more reliable for image URLs and avoids CORS issues
+    return new Promise((resolve) => {
+      console.log(`Testing image URL accessibility: ${url}`);
+      const img = new Image();
+      
+      // Set timeout to avoid waiting too long for response
+      const timeout = setTimeout(() => {
+        console.log(`URL access test timed out for ${url}`);
+        resolve(false);
+      }, 5000);
+      
+      img.onload = () => {
+        clearTimeout(timeout);
+        console.log(`URL access test passed for ${url}`);
+        resolve(true);
+      };
+      
+      img.onerror = () => {
+        clearTimeout(timeout);
+        console.log(`URL access test failed for ${url}`);
+        resolve(false);
+      };
+      
+      // Add cache buster to avoid cached results
+      const cacheBuster = Date.now();
+      img.src = url.includes('?') ? `${url}&_cb=${cacheBuster}` : `${url}?_cb=${cacheBuster}`;
+    });
   } catch (error) {
-    console.error(`URL access test failed for ${url}:`, error);
+    console.error(`URL access test error for ${url}:`, error);
     return false;
   }
 };
