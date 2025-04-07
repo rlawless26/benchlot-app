@@ -1427,7 +1427,7 @@ export const fetchCartItems = async (userId) => {
 //==============================================================================
 
 /**
- * Upload a profile image for a user
+ * Upload a profile image for a user with multiple bucket fallbacks and error handling
  * @param {File} file - Image file to upload
  * @param {string} userId - Optional user ID (defaults to current user)
  * @returns {Object} Result of the operation with avatar URL
@@ -1460,30 +1460,85 @@ export const uploadProfileImage = async (file, userId = null) => {
       return { error: { message: 'File size must be less than 2MB' } };
     }
     
-    // Generate a unique filename
+    // Generate a unique filename - simplify to avoid directory structure issues
+    const timestamp = Date.now();
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
+    const fileName = `user_${userId}_${timestamp}.${fileExt}`;
     
-    // Upload the file to storage
-    const { error: uploadError } = await supabase.storage
-      .from('profiles')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
+    // Define buckets to try in order of preference based on existing bucket structure
+    const buckets = [
+      { name: 'user-images', path: `avatars/${fileName}` },
+      { name: 'tool-images', path: `avatars/${fileName}` }
+    ];
+    
+    // Try each bucket in sequence until one works
+    let uploadError = null;
+    let publicUrl = null;
+    
+    for (const bucket of buckets) {
+      console.log(`Attempting to upload to ${bucket.name} bucket with path: ${bucket.path}`);
       
-    if (uploadError) {
-      console.error('Error uploading profile image:', uploadError);
-      return { error: uploadError };
+      try {
+        // Upload the file to current bucket
+        const { data, error } = await supabase.storage
+          .from(bucket.name)
+          .upload(bucket.path, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+          
+        if (error) {
+          console.error(`Error uploading to ${bucket.name} bucket:`, error);
+          uploadError = error;
+          continue; // Try next bucket
+        }
+        
+        // Get the public URL
+        const { data: { publicUrl: url } } = supabase.storage
+          .from(bucket.name)
+          .getPublicUrl(bucket.path);
+        
+        publicUrl = url;
+        console.log(`Successfully uploaded to ${bucket.name} bucket. URL:`, publicUrl);
+        break; // Stop trying buckets
+      } catch (error) {
+        console.error(`Unexpected error uploading to ${bucket.name} bucket:`, error);
+        uploadError = error;
+      }
     }
     
-    // Get the public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('profiles')
-      .getPublicUrl(filePath);
+    // If we couldn't upload to any bucket
+    if (!publicUrl) {
+      console.error('Failed to upload to any storage bucket');
+      return { 
+        error: { 
+          message: 'Failed to upload image to any storage bucket. Please try again or contact support.', 
+          details: uploadError 
+        } 
+      };
+    }
     
-    // Update the user's profile with the new avatar URL - don't include updated_at as it doesn't exist in schema
+    // Update user profile with new avatar URL
+    try {
+      await updateUserWithNewAvatar(userId, publicUrl);
+      return { data: { avatarUrl: publicUrl } };
+    } catch (updateError) {
+      console.error('Error updating user profile with avatar URL:', updateError);
+      // Still return success since the upload worked, but include a warning
+      return { 
+        data: { avatarUrl: publicUrl },
+        warning: 'Image uploaded successfully, but there was an issue updating your profile. Please refresh or try again.'
+      };
+    }
+  } catch (error) {
+    console.error('Unexpected error in uploadProfileImage:', error);
+    return { error: { message: 'An unexpected error occurred', details: error } };
+  }
+};
+
+// Helper function to update user profile with new avatar URL
+async function updateUserWithNewAvatar(userId, publicUrl) {
+  try {
     const { error: updateError } = await supabase
       .from('users')
       .update({ 
@@ -1493,16 +1548,15 @@ export const uploadProfileImage = async (file, userId = null) => {
       
     if (updateError) {
       console.error('Error updating user profile with new avatar:', updateError);
-      return { error: updateError };
+      throw updateError;
     }
     
     console.log('Profile image uploaded successfully:', publicUrl);
-    return { data: { avatarUrl: publicUrl } };
   } catch (error) {
-    console.error('Unexpected error in uploadProfileImage:', error);
-    return { error };
+    console.error('Error in updateUserWithNewAvatar:', error);
+    throw error;
   }
-};
+}
 
 /**
  * Remove profile image for a user
@@ -1536,7 +1590,7 @@ export const removeProfileImage = async (userId = null) => {
       return { error: profileError };
     }
     
-    // Update the user profile to remove avatar_url - don't include updated_at as it doesn't exist in schema
+    // Update the user profile to remove avatar_url
     const { error: updateError } = await supabase
       .from('users')
       .update({ 
@@ -1552,15 +1606,49 @@ export const removeProfileImage = async (userId = null) => {
     // Try to delete the file from storage if it exists
     if (profile && profile.avatar_url) {
       try {
-        // Extract the path from the URL
-        const urlPath = new URL(profile.avatar_url).pathname;
-        const storagePath = urlPath.split('/').slice(-2).join('/');
+        // Extract file information from URL
+        const url = new URL(profile.avatar_url);
+        const pathParts = url.pathname.split('/');
+        const fileName = pathParts[pathParts.length - 1];
         
-        if (storagePath) {
-          await supabase.storage.from('profiles').remove([`avatars/${storagePath}`]);
+        // Determine which bucket the file is in from the URL based on existing bucket structure
+        let bucket = 'user-images'; // default assumption for profile images
+        
+        if (url.pathname.includes('/tool-images/')) {
+          bucket = 'tool-images';
+        } else if (url.pathname.includes('/user-images/')) {
+          bucket = 'user-images';
         }
+        
+        // Try to construct the correct path based on the URL structure
+        let filePath;
+        
+        // For existing bucket structure, we always use the avatars/ prefix
+        if (url.pathname.includes('/avatars/')) {
+          // Extract the full path after the bucket name
+          const pathAfterBucket = url.pathname.split(`/${bucket}/`)[1];
+          filePath = pathAfterBucket;
+        } else {
+          // Fallback - just use avatars/filename
+          filePath = `avatars/${fileName}`;
+        }
+        
+        console.log(`Attempting to remove file from ${bucket} bucket: ${filePath}`);
+        
+        // Attempt to remove the file
+        const { error: removeError } = await supabase.storage
+          .from(bucket)
+          .remove([filePath]);
+          
+        if (removeError) {
+          console.warn(`Could not remove file from ${bucket} bucket:`, removeError);
+          // Don't fail the operation if removal fails
+        } else {
+          console.log(`Successfully removed file from ${bucket} bucket`);
+        }
+        
       } catch (removeError) {
-        console.warn('Could not remove old avatar file:', removeError);
+        console.warn('Could not parse or remove avatar file:', removeError);
         // Don't fail the operation if storage removal fails
       }
     }

@@ -10,7 +10,7 @@ async function checkUserStatus() {
   // Get the current user
   const { data: { user } } = await supabase.auth.getUser();
   
-  if (\!user) {
+  if (!user) {
     console.log('No authenticated user found');
     return;
   }
