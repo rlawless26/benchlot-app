@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benchlot Diagnostics</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 { color: #2d3748; }
+    h2 { color: #4a5568; margin-top: 30px; }
+    pre {
+      background-color: #f7fafc;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+    }
+    .status { font-weight: bold; }
+    .success { color: #38a169; }
+    .error { color: #e53e3e; }
+    .warning { color: #d69e2e; }
+    button {
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #3182ce;
+    }
+    .result-container {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Benchlot Application Diagnostics</h1>
+  <p>This page helps diagnose issues with the Benchlot application.</p>
+
+  <h2>Environment Information</h2>
+  <div id="env-info">Loading...</div>
+
+  <h2>Supabase Connection Test</h2>
+  <button id="test-supabase">Test Supabase Connection</button>
+  <div id="supabase-result" class="result-container"></div>
+
+  <h2>API Endpoint Tests</h2>
+  <button id="test-health">Test /api/health</button>
+  <button id="test-email-connection">Test Email Connection</button>
+  <div id="api-result" class="result-container"></div>
+
+  <h2>React Router Test</h2>
+  <button id="test-router">Test React Router</button>
+  <div id="router-result" class="result-container"></div>
+
+  <h2>Marketplace Data Test</h2>
+  <button id="test-marketplace">Test Marketplace Data</button>
+  <div id="marketplace-result" class="result-container"></div>
+  
+  <script>
+    // Environment information
+    function showEnvironmentInfo() {
+      const envInfo = document.getElementById('env-info');
+      const info = {
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+        host: window.location.host,
+        protocol: window.location.protocol,
+        time: new Date().toISOString(),
+        reactEnv: window.ENV || 'Not available'
+      };
+      
+      envInfo.innerHTML = `<pre>${JSON.stringify(info, null, 2)}</pre>`;
+      
+      // Try to get React env variables from window
+      try {
+        fetch('/env.js')
+          .then(response => {
+            if (!response.ok) throw new Error('env.js not found');
+            return response.text();
+          })
+          .then(text => {
+            envInfo.innerHTML += `<p class="status success">Found env.js</p>`;
+            envInfo.innerHTML += `<pre>${text}</pre>`;
+          })
+          .catch(err => {
+            envInfo.innerHTML += `<p class="status warning">Could not load env.js: ${err.message}</p>`;
+          });
+      } catch (err) {
+        console.error('Error checking env.js:', err);
+      }
+    }
+
+    // Test Supabase connection
+    document.getElementById('test-supabase').addEventListener('click', function() {
+      const resultElement = document.getElementById('supabase-result');
+      resultElement.innerHTML = 'Testing Supabase connection...';
+      
+      // Try to find Supabase URL and key in the page
+      let supabaseUrl = '';
+      let supabaseKey = '';
+      
+      // Check window for React environment variables
+      if (window.REACT_APP_SUPABASE_URL) {
+        supabaseUrl = window.REACT_APP_SUPABASE_URL;
+      }
+      
+      if (window.REACT_APP_SUPABASE_ANON_KEY) {
+        supabaseKey = window.REACT_APP_SUPABASE_ANON_KEY;
+      }
+      
+      // If no variables found, try to infer from known Benchlot values
+      if (!supabaseUrl) {
+        supabaseUrl = 'https://tavhowcenicgowmdmbcz.supabase.co';
+      }
+      
+      resultElement.innerHTML = `
+        <p>Detected Supabase URL: ${supabaseUrl || 'Not found'}</p>
+        <p>Detected Supabase Key: ${supabaseKey ? '✓ Found (not shown for security)' : '❌ Not found'}</p>
+      `;
+      
+      // Make a simple fetch request to Supabase health endpoint
+      fetch(`${supabaseUrl}/rest/v1/?apikey=${supabaseKey}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error(`Status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        resultElement.innerHTML += `
+          <p class="status success">✅ Supabase connection successful!</p>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      })
+      .catch(error => {
+        resultElement.innerHTML += `
+          <p class="status error">❌ Supabase connection failed: ${error.message}</p>
+          <p>This typically indicates either:</p>
+          <ul>
+            <li>Environment variables not correctly set</li>
+            <li>CORS issues preventing API access</li>
+            <li>Network connectivity problems</li>
+          </ul>
+        `;
+      });
+    });
+
+    // Test API health endpoint
+    document.getElementById('test-health').addEventListener('click', function() {
+      const resultElement = document.getElementById('api-result');
+      resultElement.innerHTML = 'Testing API health endpoint...';
+      
+      fetch('/api/health')
+        .then(response => {
+          if (!response.ok) throw new Error(`Status: ${response.status}`);
+          return response.json();
+        })
+        .then(data => {
+          resultElement.innerHTML = `
+            <p class="status success">✅ API health check successful!</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        })
+        .catch(error => {
+          resultElement.innerHTML = `
+            <p class="status error">❌ API health check failed: ${error.message}</p>
+            <p>This indicates the Express backend is not properly configured.</p>
+          `;
+        });
+    });
+
+    // Test email connection
+    document.getElementById('test-email-connection').addEventListener('click', function() {
+      const resultElement = document.getElementById('api-result');
+      resultElement.innerHTML = 'Testing email API connection...';
+      
+      fetch('/api/email/test-connection')
+        .then(response => {
+          if (!response.ok) throw new Error(`Status: ${response.status}`);
+          return response.json();
+        })
+        .then(data => {
+          resultElement.innerHTML = `
+            <p class="status success">✅ Email API connection successful!</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        })
+        .catch(error => {
+          resultElement.innerHTML = `
+            <p class="status error">❌ Email API connection failed: ${error.message}</p>
+            <p>This indicates issues with the email service configuration.</p>
+          `;
+        });
+    });
+
+    // Test React Router
+    document.getElementById('test-router').addEventListener('click', function() {
+      const resultElement = document.getElementById('router-result');
+      resultElement.innerHTML = 'Testing React Router...';
+      
+      // Try to navigate to various routes and see if they load properly
+      const testRoutes = [
+        '/',
+        '/marketplace',
+        '/about',
+        '/tool/12345-test'
+      ];
+      
+      let results = '<p>Testing navigation to these routes:</p><ul>';
+      testRoutes.forEach(route => {
+        results += `<li><a href="${route}" target="_blank">${route}</a></li>`;
+      });
+      results += '</ul>';
+      
+      results += `
+        <p>If these links open correctly, React Router is working.</p>
+        <p>If they show 404 errors, there's an issue with React Router configuration in Vercel.</p>
+      `;
+      
+      resultElement.innerHTML = results;
+    });
+
+    // Test Marketplace Data
+    document.getElementById('test-marketplace').addEventListener('click', function() {
+      const resultElement = document.getElementById('marketplace-result');
+      resultElement.innerHTML = 'Testing marketplace data...';
+      
+      // Try to extract Supabase credentials from the page
+      let supabaseUrl = window.REACT_APP_SUPABASE_URL || 'https://tavhowcenicgowmdmbcz.supabase.co';
+      let supabaseKey = window.REACT_APP_SUPABASE_ANON_KEY || '';
+      
+      if (!supabaseKey) {
+        resultElement.innerHTML = `
+          <p class="status error">❌ Cannot test marketplace data: Supabase key not found</p>
+          <p>This test requires the Supabase anon key to be available.</p>
+        `;
+        return;
+      }
+      
+      // Make a direct request to Supabase to fetch tools data
+      fetch(`${supabaseUrl}/rest/v1/tools?select=*&limit=5&is_sold=eq.false`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error(`Status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        if (data && Array.isArray(data) && data.length > 0) {
+          resultElement.innerHTML = `
+            <p class="status success">✅ Successfully fetched marketplace data!</p>
+            <p>Found ${data.length} tools in the database.</p>
+            <pre>${JSON.stringify(data.map(tool => ({id: tool.id, name: tool.name, price: tool.current_price})), null, 2)}</pre>
+          `;
+        } else {
+          resultElement.innerHTML = `
+            <p class="status warning">⚠️ Marketplace data found, but no tools available</p>
+            <p>The database connection works, but no tool listings were returned.</p>
+          `;
+        }
+      })
+      .catch(error => {
+        resultElement.innerHTML = `
+          <p class="status error">❌ Failed to fetch marketplace data: ${error.message}</p>
+          <p>This indicates an issue with the Supabase database connection.</p>
+        `;
+      });
+    });
+
+    // Initialize
+    showEnvironmentInfo();
+  </script>
+</body>
+</html>
