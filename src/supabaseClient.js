@@ -1,6 +1,7 @@
 // src/supabaseClient.js
 import { createClient } from '@supabase/supabase-js';
 import config from './config';
+import { fixStorageUrl } from './utils/imageUtils';
 
 // Initialize Supabase client with configuration 
 // The bootstrapper.js script should have already guaranteed these values are available
@@ -1621,8 +1622,7 @@ export const uploadProfileImage = async (file, userId = null) => {
   }
 };
 
-// Import the standardized URL utility functions 
-import { fixStorageUrl } from './utils/imageUtils';
+// Using fixStorageUrl from the imported utility functions
 
 /**
  * Remove profile image for a user

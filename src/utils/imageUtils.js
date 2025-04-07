@@ -84,10 +84,38 @@ export function getPlaceholderUrl(width = 300, height = 200, text = 'Placeholder
   return `https://via.placeholder.com/${width}x${height}/CCCCCC/333333?text=${encodeURIComponent(text)}`;
 }
 
+/**
+ * LEGACY FUNCTION - Use ToolImage component or getToolImageUrl instead
+ * Get a tool image URL for backward compatibility with existing code
+ * @param {object} tool - The tool object
+ * @param {number} index - The image index (default: 0)
+ * @param {number} width - Width for placeholder (default: 300)
+ * @param {number} height - Height for placeholder (default: 200)
+ * @returns {string} - The URL for the tool image
+ */
+export function getToolImage(tool, index = 0, width = 300, height = 200) {
+  if (!tool) return getPlaceholderUrl(width, height, 'Tool');
+  
+  // If the tool has images array, use that first
+  if (tool.images && Array.isArray(tool.images) && tool.images[index]) {
+    const url = tool.images[index];
+    return fixStorageUrl(url);
+  }
+  
+  // Otherwise use the tool ID to generate a URL
+  if (tool.id) {
+    return getToolImageUrl(tool.id, index);
+  }
+  
+  // Return a placeholder as last resort
+  return getPlaceholderUrl(width, height, tool.name || 'Tool');
+}
+
 export default {
   getStorageUrl,
   getUserAvatarUrl,
   getToolImageUrl,
   fixStorageUrl,
-  getPlaceholderUrl
+  getPlaceholderUrl,
+  getToolImage
 };
