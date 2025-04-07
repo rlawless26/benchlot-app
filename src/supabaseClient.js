@@ -944,11 +944,11 @@ export const addToWishlist = async (userId, toolId) => {
     }
     
     const { data, error } = await supabase
-      .from('wishlists')
+      .from('wishlist') // Corrected to match the actual table name
       .insert({
         user_id: userId,
         tool_id: toolId,
-        added_at: new Date().toISOString()
+        created_at: new Date().toISOString() // Corrected to match the schema
       })
       .select();
       
@@ -980,7 +980,7 @@ export const removeFromWishlist = async (userId, toolId) => {
     }
     
     const { error } = await supabase
-      .from('wishlists')
+      .from('wishlist') // Corrected to match the actual table name
       .delete()
       .match({ user_id: userId, tool_id: toolId });
       
@@ -1011,10 +1011,10 @@ export const fetchWishlistItems = async (userId) => {
     }
     
     const { data, error } = await supabase
-      .from('wishlists')
+      .from('wishlist') // Corrected to match the actual table name
       .select(`
         id,
-        added_at,
+        created_at, // Corrected to match the schema
         tool:tool_id(
           id,
           name,
@@ -1029,7 +1029,7 @@ export const fetchWishlistItems = async (userId) => {
         )
       `)
       .eq('user_id', userId)
-      .order('added_at', { ascending: false });
+      .order('created_at', { ascending: false }); // Corrected to match the schema
       
     if (error) {
       console.error('Error fetching wishlist:', error);
@@ -1069,7 +1069,7 @@ export const fetchWishlist = async () => {
     const transformedData = data.map(item => ({
       id: item.tool.id,
       ...item.tool,
-      added_at: item.added_at
+      added_at: item.created_at // Maintain added_at for compatibility but use created_at value
     }));
     
     return { data: transformedData };
@@ -1094,7 +1094,7 @@ export const isInWishlist = async (userId, toolId) => {
     }
     
     const { data, error } = await supabase
-      .from('wishlists')
+      .from('wishlist') // Corrected to match the actual table name
       .select('id')
       .match({ user_id: userId, tool_id: toolId })
       .maybeSingle();
@@ -1950,7 +1950,7 @@ export const fetchUserReviews = async (userId, limit = 10) => {
         created_at,
         reviewer:reviewer_id(id, username, full_name, avatar_url)
       `)
-      .eq('user_id', userId)
+      .eq('reviewed_user_id', userId) // Corrected to match the schema
       .order('created_at', { ascending: false })
       .limit(limit);
       
