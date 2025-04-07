@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { User, Image as ImageIcon } from 'lucide-react';
+import { User } from 'lucide-react';
+import { fixStorageUrl } from '../utils/imageUtils';
 
 /**
  * Fixed Profile Image component with error handling and automated retries
@@ -12,35 +13,43 @@ const FixedProfileImage = ({ url, size = 24, userId, fallback }) => {
   const [errorLoading, setErrorLoading] = useState(false);
   const maxRetries = 2;
   
+  // Default avatar URL (centralized for consistency)
+  const defaultAvatarUrl = 'https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/user-images/avatars/default-avatar.svg';
+  
   // If we have the URL, try to fix it on mount
   useEffect(() => {
     if (url) {
+      // Special case handling for the problematic 'svg' URL
+      if (url.includes('/avatars/svg')) {
+        console.log('Invalid SVG URL detected, using default avatar');
+        setDisplayUrl(defaultAvatarUrl);
+        return;
+      }
+      
       try {
-        // Properly handle URL parameters to avoid duplicates
-        const urlObj = new URL(url);
-        
-        // Remove any existing cache buster parameters
-        urlObj.searchParams.delete('t');
-        urlObj.searchParams.delete('cb');
-        
-        // Add a fresh cache buster with unique value
-        const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-        urlObj.searchParams.set('cb', cacheBuster);
-        
-        setDisplayUrl(urlObj.toString());
-        console.log(`Fixed image URL: ${urlObj.toString()}`);
+        // Convert signed URLs to public and handle cache busting
+        const fixedUrl = fixStorageUrl(url);
+        setDisplayUrl(fixedUrl);
+        console.log(`Fixed profile image URL: ${fixedUrl}`);
       } catch (e) {
-        // Fallback for URL parsing errors
         console.warn('URL parsing failed in FixedProfileImage:', e);
         
-        // Simple approach for malformed URLs
-        const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-        const simpleFixedUrl = url.includes('?') 
-          ? `${url.split('?')[0]}?cb=${cacheBuster}` 
-          : `${url}?cb=${cacheBuster}`;
-        
-        setDisplayUrl(simpleFixedUrl);
+        // Fallback for parsing errors
+        if (url.includes('/object/sign/')) {
+          // Convert signed URL to public
+          const baseUrl = url.replace('/object/sign/', '/object/public/').split('?')[0];
+          setDisplayUrl(`${baseUrl}?cb=${Date.now()}`);
+        } else {
+          // Simple cache busting
+          const simpleFixedUrl = url.includes('?') 
+            ? `${url.split('?')[0]}?cb=${Date.now()}` 
+            : `${url}?cb=${Date.now()}`;
+          setDisplayUrl(simpleFixedUrl);
+        }
       }
+    } else {
+      // No URL provided, use default avatar
+      setDisplayUrl(defaultAvatarUrl);
     }
   }, [url]);
   
@@ -54,58 +63,37 @@ const FixedProfileImage = ({ url, size = 24, userId, fallback }) => {
       setRetryCount(retryCount + 1);
       
       if (retryCount === 0) {
-        // Try fixing the URL structure - look for user-images vs tool-images
+        // First retry: ensure we're using the user-images bucket
         let fixedUrl = url;
         
         // ONLY use user-images bucket for profile images
         if (url.includes('tool-images')) {
-          // Always replace tool-images with user-images (this is the correct bucket)
           fixedUrl = url.replace('tool-images', 'user-images');
           console.log('Corrected bucket from tool-images to user-images:', fixedUrl);
         }
-        // NEVER try tool-images bucket for profile images - this causes 400 errors
         
-        try {
-          // Properly handle URL parameters
-          const urlObj = new URL(fixedUrl);
-          
-          // Clear all existing query parameters to simplify
-          Array.from(urlObj.searchParams.keys()).forEach(key => {
-            urlObj.searchParams.delete(key);
-          });
-          
-          // Add a simple cache buster
-          urlObj.searchParams.set('cb', Date.now().toString());
-          
-          fixedUrl = urlObj.toString();
-        } catch (e) {
-          // Just use a simplified URL without query params
-          fixedUrl = fixedUrl.split('?')[0] + '?cb=' + Date.now();
+        // Handle signed URLs
+        if (fixedUrl.includes('/object/sign/')) {
+          fixedUrl = fixedUrl.replace('/object/sign/', '/object/public/');
         }
+        
+        // Strip all query parameters and add a fresh cache buster
+        fixedUrl = fixedUrl.split('?')[0] + '?cb=' + Date.now();
         
         console.log("Retrying with fixed URL:", fixedUrl);
         setDisplayUrl(fixedUrl);
-        
       } else if (retryCount === 1) {
-        // Try completely stripping all query parameters
-        try {
-          let strippedUrl = url.split('?')[0];
-          console.log("Retrying with stripped URL (no params):", strippedUrl);
-          setDisplayUrl(strippedUrl);
-        } catch (e) {
-          // Last resort if that fails too
-          setUseOriginal(false);
-        }
+        // Second retry: try default avatar
+        console.log("Retrying with default avatar");
+        setDisplayUrl(defaultAvatarUrl);
       } else {
         // Final fallback: use generated avatar
         setUseOriginal(false);
       }
     } else {
-      // All retries failed
+      // All retries failed, use fallback or generated avatar
       setErrorLoading(true);
-      if (fallback) {
-        e.target.src = fallback(96, 96);
-      }
+      setUseOriginal(false);
     }
   };
   
@@ -122,7 +110,7 @@ const FixedProfileImage = ({ url, size = 24, userId, fallback }) => {
           />
         ) : (
           <div className={`w-${size} h-${size} rounded-full bg-forest-100 flex items-center justify-center`}>
-            <ImageIcon className="h-8 w-8 text-forest-700" />
+            <User className="h-8 w-8 text-forest-700" />
           </div>
         )}
       </div>

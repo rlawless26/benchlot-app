@@ -861,10 +861,12 @@ export const uploadToolImage = async (toolId, file, position = 0) => {
       return { error: uploadError };
     }
     
-    // Get the public URL
+    // Get the public URL (always use public URLs, not signed URLs)
     const { data: { publicUrl } } = supabase.storage
       .from('images')
       .getPublicUrl(filePath);
+      
+    console.log(`Tool image public URL: ${publicUrl}`);
     
     // Update the tool with the new image
     const { data: tool, error: toolError } = await supabase
