@@ -74,6 +74,60 @@ export const checkSupabaseConnection = async () => {
   }
 };
 
+/**
+ * Get the current user with profile data from Supabase
+ * @returns {Object} Current user data with profile
+ */
+export const getCurrentUser = async () => {
+  try {
+    // Get current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Error getting session:', sessionError);
+      return { data: null, error: sessionError };
+    }
+    
+    if (!session) {
+      return { data: null };
+    }
+    
+    // Get user data
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('Error getting user:', userError);
+      return { data: null, error: userError };
+    }
+    
+    if (!user) {
+      return { data: null };
+    }
+    
+    // Get user profile from the users table
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+      
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error getting user profile:', profileError);
+      // Don't return error here, as we still have the user data
+    }
+    
+    return {
+      data: {
+        ...user,
+        profile: profile || null
+      }
+    };
+  } catch (error) {
+    console.error('Unexpected error in getCurrentUser:', error);
+    return { data: null, error };
+  }
+};
+
 // Auth helper functions
 export const signUp = async (email, password, userData) => {
   // Step 1: Sign up with email and password
@@ -130,5 +184,20 @@ export const signUp = async (email, password, userData) => {
 // For brevity, not including all the other functions that are unchanged
 // In a real implementation, you would update all API endpoints to use the
 // config.urls.api prefix for consistency.
+
+// Sign out function (since we see it imported in header.jsx)
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+      return { error };
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in signOut:', error);
+    return { error };
+  }
+};
 
 // Rest of the file remains the same...
