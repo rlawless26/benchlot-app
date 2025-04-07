@@ -37,6 +37,7 @@ import SellerDashboardPage from './Pages/SellerDashboardPage';
 import SellerOrdersPage from './Pages/SellerOrdersPage';
 import SellerEarningsPage from './Pages/SellerEarningsPage';
 import SellerAnalyticsPage from './Pages/SellerAnalyticsPage';
+import DiagnosticsPage from './Pages/DiagnosticsPage';
 
 const ProtectedRoute = ({ element }) => {
   const [session, setSession] = useState(null);
@@ -200,6 +201,7 @@ function App() {
       <Route path="/survey" element={<SurveyPage />} />
       <Route path="/product/:id" element={<ProductPage />} />
       <Route path="/2" element={<LandingPage />} />
+      <Route path="/diagnostics" element={<DiagnosticsPage />} />
      
       
       {/* Admin Routes */}

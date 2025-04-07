@@ -1,5 +1,6 @@
 import React from 'react';
-import { Phone, Mail, HelpCircle } from 'lucide-react';
+import { Phone, Mail, HelpCircle, Wrench } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 
 const HelpPage = () => {
@@ -42,6 +43,21 @@ const HelpPage = () => {
                 <div>
                   <h3 className="text-lg font-medium text-stone-800">Email Us</h3>
                   <p className="text-forest-700 font-medium">hello@benchlot.com</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center p-4 border border-stone-200 rounded-lg bg-forest-50">
+                <div className="bg-white shadow-md w-12 h-12 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                  <Wrench className="h-6 w-6 text-forest-700" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-stone-800">Technical Issues?</h3>
+                  <Link to="/diagnostics" className="text-forest-700 font-medium hover:underline">
+                    Visit our diagnostics page
+                  </Link>
+                  <p className="text-sm text-stone-500 mt-1">
+                    Fix environment issues, profile images not loading, and more
+                  </p>
                 </div>
               </div>
             </div>

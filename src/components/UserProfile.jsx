@@ -354,6 +354,12 @@ const UserProfile = () => {
           <p>Profile exists: {profile ? 'Yes' : 'No'}</p>
           <p>isCurrentUser: {isCurrentUser ? 'Yes' : 'No'}</p>
           <p>User ID: {id || 'Not in URL'}</p>
+          <div className="mt-3 pt-3 border-t border-stone-200">
+            <p className="text-sm text-stone-500">
+              Having trouble with the app? Visit the{' '}
+              <Link to="/diagnostics" className="text-forest-700 hover:underline">diagnostics page</Link> to fix environment issues.
+            </p>
+          </div>
         </div>
 
         {isCurrentUser ? (
