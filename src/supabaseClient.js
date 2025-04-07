@@ -47,21 +47,100 @@ function createSupabaseClient() {
   }
   
   try {
-    // Create client with proper headers
-    return createClient(supabaseUrl, supabaseKey, {
+    // Log creation attempt
+    console.log('Creating Supabase client with enhanced compatibility options');
+    
+    // Safari compatibility mode
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    if (isSafari) {
+      console.log('🧭 Safari detected, applying optimized settings');
+    }
+    
+    // Create client with proper headers and enhanced options for Safari
+    const client = createClient(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        // Safari can have issues with localStorage in private browsing mode
+        // and with cookies in some scenarios - ensure we have alternate storage
+        storageKey: 'supabase.auth.token',
+        storage: {
+          getItem: (key) => {
+            try {
+              return localStorage.getItem(key);
+            } catch (e) {
+              console.warn('Storage access error, using fallback:', e);
+              // If window.__BENCHLOT_DIAGNOSTICS exists, log the error
+              if (window.__BENCHLOT_DIAGNOSTICS) {
+                window.__BENCHLOT_DIAGNOSTICS.supabaseStatus.errors.push({
+                  timestamp: new Date().toISOString(),
+                  error: `Storage error: ${e.message}`,
+                  type: 'storage'
+                });
+              }
+              return null;
+            }
+          },
+          setItem: (key, value) => {
+            try {
+              localStorage.setItem(key, value);
+            } catch (e) {
+              console.warn('Storage write error:', e);
+              // If window.__BENCHLOT_DIAGNOSTICS exists, log the error
+              if (window.__BENCHLOT_DIAGNOSTICS) {
+                window.__BENCHLOT_DIAGNOSTICS.supabaseStatus.errors.push({
+                  timestamp: new Date().toISOString(),
+                  error: `Storage write error: ${e.message}`,
+                  type: 'storage'
+                });
+              }
+            }
+          },
+          removeItem: (key) => {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              console.warn('Storage remove error:', e);
+            }
+          }
+        }
       },
       global: {
         headers: {
           "Content-Type": "application/json",
           "Accept": "*/*",
+          // Additional headers to help with Safari's stricter CORS handling
+          "Cache-Control": "no-cache",
+          "X-Client-Info": `${navigator.userAgent}`
         },
       },
+      // Additional settings that can help with troublesome browsers
+      realtime: {
+        params: {
+          eventsPerSecond: 5  // Lower value for more stable connections
+        } 
+      }
     });
+    
+    // Mark initialized in diagnostics if available
+    if (window.__BENCHLOT_DIAGNOSTICS) {
+      window.__BENCHLOT_DIAGNOSTICS.supabaseStatus.initialized = true;
+    }
+    
+    return client;
   } catch (error) {
     console.error('Error creating Supabase client:', error);
+    
+    // Record in diagnostics if available
+    if (window.__BENCHLOT_DIAGNOSTICS) {
+      window.__BENCHLOT_DIAGNOSTICS.supabaseStatus.errors.push({
+        timestamp: new Date().toISOString(),
+        error: `Client initialization error: ${error.message}`,
+        type: 'initialization'
+      });
+    }
+    
     throw new Error(`Failed to initialize Supabase client: ${error.message}`);
   }
 }

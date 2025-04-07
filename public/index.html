@@ -14,7 +14,50 @@
     
     <!-- CRITICAL: Core configuration bootstrapper (must be first script) -->
     <script src="%PUBLIC_URL%/bootstrapper.js?v=1"></script>
-      
+    
+    <!-- Browser compatibility patches -->
+    <script>
+      // Safari localStorage patch for private browsing mode
+      (function() {
+        try {
+          localStorage.setItem('test', 'test');
+          localStorage.removeItem('test');
+        } catch (e) {
+          // Create a polyfill for localStorage if it's not available (Safari private mode)
+          var storage = {};
+          Object.defineProperty(window, 'localStorage', {
+            value: {
+              setItem: function(key, value) {
+                storage[key] = value || '';
+              },
+              getItem: function(key) {
+                return key in storage ? storage[key] : null;
+              },
+              removeItem: function(key) {
+                delete storage[key];
+              },
+              clear: function() {
+                storage = {};
+              },
+              key: function(i) {
+                var keys = Object.keys(storage);
+                return keys[i] || null;
+              },
+              get length() {
+                return Object.keys(storage).length;
+              }
+            },
+            configurable: true,
+            writable: true
+          });
+          console.log('📱 Safari localStorage polyfill activated');
+        }
+      })();
+    </script>
+    
+    <!-- Debug utility for troubleshooting browser compatibility issues -->
+    <script src="%PUBLIC_URL%/debug.js?v=1"></script>
+    
     <!-- Start of HubSpot Embed Code -->
 <script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/396680.js"></script>
 <!-- End of HubSpot Embed Code -->
@@ -44,10 +87,7 @@
       }
     </script>
   </head>
-  <body>
-    <body class="font-sans bg-base">
-      <div id="root"></div>
-    </body>
+  <body class="font-sans bg-base">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
