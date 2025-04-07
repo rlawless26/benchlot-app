@@ -1902,6 +1902,70 @@ export const fetchSimilarTools = async (toolId, category, limit = 3) => {
   }
 };
 
+/**
+ * Fetch all listings for a specific user
+ * @param {string} userId - User ID to fetch listings for
+ * @param {Object} options - Optional filter/sort options
+ * @returns {Object} Array of user's tool listings or error
+ */
+export const fetchUserListings = async (userId, options = {}) => {
+  try {
+    console.log(`Fetching listings for user ${userId}`);
+    
+    if (!userId) {
+      return { error: { message: 'User ID is required' } };
+    }
+    
+    // Use fetchTools with seller filter
+    return await fetchTools({
+      sellerId: userId,
+      ...options
+    });
+  } catch (error) {
+    console.error('Unexpected error in fetchUserListings:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch reviews for a specific user
+ * @param {string} userId - User ID to fetch reviews for
+ * @param {number} limit - Number of reviews to fetch
+ * @returns {Object} Array of user reviews or error
+ */
+export const fetchUserReviews = async (userId, limit = 10) => {
+  try {
+    console.log(`Fetching reviews for user ${userId}`);
+    
+    if (!userId) {
+      return { error: { message: 'User ID is required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('reviews')
+      .select(`
+        id,
+        rating,
+        content,
+        created_at,
+        reviewer:reviewer_id(id, username, full_name, avatar_url)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+      
+    if (error) {
+      console.error('Error fetching user reviews:', error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchUserReviews:', error);
+    return { error };
+  }
+};
+
 //==============================================================================
 // EXPORT ALL FUNCTIONS
 //==============================================================================
