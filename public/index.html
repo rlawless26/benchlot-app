@@ -20,8 +20,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
     <title>Benchlot - Buy & Sell Woodworking Tools: New, Used & Vintage Hand & Power Tools</title>
     <link rel="stylesheet" href="https://use.typekit.net/ddx2qis.css">
-    <!-- Runtime environment variables - loaded directly -->
+    <!-- Runtime environment variables - loaded directly before React starts -->
     <script src="%PUBLIC_URL%/runtime-env.js"></script>
+    <!-- This will ensure environment variables are available in all browsers and environments -->
+    <script>
+      // Fallback for environment variables if script fails to load
+      if (!window.BENCHLOT_ENV) {
+        console.warn('Runtime environment script not loaded, using fallback values');
+        window.BENCHLOT_ENV = {
+          SUPABASE_URL: 'https://tavhowcenicgowmdmbcz.supabase.co',
+          SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2Nlbmljb3N3bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzA1NDA0MzgsImV4cCI6MTk4NjExNjQzOH0.uUF9zwzV1t9qUKl3aEUfRvRTgyPGSWLsJcXZt5EnRCM',
+          API_URL: window.location.origin,
+          FRONTEND_URL: window.location.origin
+        };
+        window.REACT_APP_SUPABASE_URL = window.BENCHLOT_ENV.SUPABASE_URL;
+        window.REACT_APP_SUPABASE_ANON_KEY = window.BENCHLOT_ENV.SUPABASE_ANON_KEY;
+        window.REACT_APP_API_URL = window.BENCHLOT_ENV.API_URL;
+        window.REACT_APP_FRONTEND_URL = window.BENCHLOT_ENV.FRONTEND_URL;
+      }
+    </script>
   </head>
   <body>
     <body class="font-sans bg-base">

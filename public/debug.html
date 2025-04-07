@@ -69,9 +69,36 @@
   <div id="marketplace-result" class="result-container"></div>
   
   <script>
+    // Function to gather environment variables from all possible sources
+    function gatherEnvironmentVariables() {
+      return {
+        reactApp: {
+          supabaseUrl: window.REACT_APP_SUPABASE_URL || 'Not found',
+          supabaseKey: window.REACT_APP_SUPABASE_ANON_KEY ? 'Found (not shown)' : 'Not found',
+          apiUrl: window.REACT_APP_API_URL || 'Not found',
+          frontendUrl: window.REACT_APP_FRONTEND_URL || 'Not found',
+        },
+        benchlot: window.BENCHLOT_ENV ? {
+          supabaseUrl: window.BENCHLOT_ENV.SUPABASE_URL || 'Not found',
+          supabaseKey: window.BENCHLOT_ENV.SUPABASE_ANON_KEY ? 'Found (not shown)' : 'Not found',
+          apiUrl: window.BENCHLOT_ENV.API_URL || 'Not found',
+          frontendUrl: window.BENCHLOT_ENV.FRONTEND_URL || 'Not found',
+          environment: window.BENCHLOT_ENV.ENVIRONMENT || 'Not found',
+          timestamp: window.BENCHLOT_ENV.TIMESTAMP || 'Not found'
+        } : 'Not available',
+        staticEnv: {
+          supabaseUrl: 'https://tavhowcenicgowmdmbcz.supabase.co',
+          supabaseKey: 'Found in static config',
+          apiUrl: window.location.origin,
+          frontendUrl: window.location.origin
+        }
+      };
+    }
+  
     // Environment information
     function showEnvironmentInfo() {
       const envInfo = document.getElementById('env-info');
+      const envVars = gatherEnvironmentVariables();
       const info = {
         userAgent: navigator.userAgent,
         url: window.location.href,
@@ -79,7 +106,8 @@
         protocol: window.location.protocol,
         time: new Date().toISOString(),
         reactEnv: window.REACT_APP_SUPABASE_URL ? 'React env vars available' : 'React env vars not available',
-        benchlotEnv: window.BENCHLOT_ENV ? 'Benchlot env vars available' : 'Benchlot env vars not available'
+        benchlotEnv: window.BENCHLOT_ENV ? 'Benchlot env vars available' : 'Benchlot env vars not available',
+        environmentVariables: envVars
       };
       
       envInfo.innerHTML = `<pre>${JSON.stringify(info, null, 2)}</pre>`;
@@ -108,6 +136,9 @@
       const resultElement = document.getElementById('supabase-result');
       resultElement.innerHTML = 'Testing Supabase connection...';
       
+      // Get environment variables from all possible sources
+      const envVars = gatherEnvironmentVariables();
+      
       // Try to find Supabase URL and key in the page
       let supabaseUrl = '';
       let supabaseKey = '';
@@ -115,18 +146,28 @@
       // Check window for React environment variables
       if (window.REACT_APP_SUPABASE_URL) {
         supabaseUrl = window.REACT_APP_SUPABASE_URL;
+      } else if (window.BENCHLOT_ENV && window.BENCHLOT_ENV.SUPABASE_URL) {
+        supabaseUrl = window.BENCHLOT_ENV.SUPABASE_URL;
+      } else {
+        // Use static fallback
+        supabaseUrl = 'https://tavhowcenicgowmdmbcz.supabase.co';
       }
       
       if (window.REACT_APP_SUPABASE_ANON_KEY) {
         supabaseKey = window.REACT_APP_SUPABASE_ANON_KEY;
-      }
-      
-      // If no variables found, try to infer from known Benchlot values
-      if (!supabaseUrl) {
-        supabaseUrl = 'https://tavhowcenicgowmdmbcz.supabase.co';
+      } else if (window.BENCHLOT_ENV && window.BENCHLOT_ENV.SUPABASE_ANON_KEY) {
+        supabaseKey = window.BENCHLOT_ENV.SUPABASE_ANON_KEY;
+      } else {
+        // Static fallback key should be used, but we don't want to expose it in client-side code
+        supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2Nlbmljb3N3bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzA1NDA0MzgsImV4cCI6MTk4NjExNjQzOH0.uUF9zwzV1t9qUKl3aEUfRvRTgyPGSWLsJcXZt5EnRCM';
       }
       
       resultElement.innerHTML = `
+        <p>Environment Check:</p>
+        <pre>${JSON.stringify({
+          reactApp: envVars.reactApp, 
+          benchlot: envVars.benchlot
+        }, null, 2)}</pre>
         <p>Detected Supabase URL: ${supabaseUrl || 'Not found'}</p>
         <p>Detected Supabase Key: ${supabaseKey ? '✓ Found (not shown for security)' : '❌ Not found'}</p>
       `;
