@@ -158,16 +158,38 @@ router.post('/test', async (req, res) => {
 // Test endpoint for verifying API connectivity
 router.get('/test-connection', async (req, res) => {
   try {
+    // Get SendGrid API key details (safely - only show first/last few chars)
+    const apiKey = process.env.SENDGRID_API_KEY || '';
+    const maskedKey = apiKey 
+      ? `${apiKey.substring(0, 5)}...${apiKey.length > 10 ? apiKey.substring(apiKey.length - 5) : ''} (${apiKey.length} chars)` 
+      : 'Not set';
+
+    // Check template IDs
+    const emailService = require('../../utils/emailService');
+    const templateIds = emailService.TEMPLATE_IDS || { message: 'Template IDs not exported' };
+    
     return res.status(200).json({
       message: 'Email API endpoint is working',
       environment: process.env.NODE_ENV,
-      sendgridApiKey: !!process.env.SENDGRID_API_KEY,
+      sendgridApiKey: maskedKey,
       frontendUrl: process.env.FRONTEND_URL || 'Not set',
+      availableEndpoints: [
+        '/api/email/test-connection (GET)',
+        '/api/email/account-creation (POST)',
+        '/api/email/password-reset (POST)',
+        '/api/email/listing-published (POST)',
+        '/api/email/message-received (POST)',
+        '/api/email/offer-received (POST)',
+        '/api/email/test (POST)',
+        '/api/email/offer-update (POST)',
+        '/api/email/message-sent (POST)'
+      ],
+      templateIdSample: templateIds.LISTING_PUBLISHED || 'Not available',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error in test endpoint:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 

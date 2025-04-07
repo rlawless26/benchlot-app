@@ -18,9 +18,12 @@ const TEMPLATE_IDS = {
   ORDER_CONFIRMATION: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
   PAYMENT_CONFIRMATION: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
   SHIPPING_CONFIRMATION: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  MESSAGE_SENT: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-  OFFER_UPDATE: 'd-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  MESSAGE_SENT: 'd-f0ea3c88e645461eb4d8f2a5d0d8de1c', // Added actual template ID
+  OFFER_UPDATE: 'd-d9c87f7c3a8946b0b2dc6059a5e6b3cc'  // Added actual template ID
 };
+
+// Export template IDs for diagnostic purposes
+exports.TEMPLATE_IDS = TEMPLATE_IDS;
 
 // Base email sender function
 const sendEmail = async (to, templateId, dynamicTemplateData, from = 'notifications@benchlot.com') => {

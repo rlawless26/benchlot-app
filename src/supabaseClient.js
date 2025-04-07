@@ -342,34 +342,61 @@ export const createTool = async (toolData) => {
     .single();
   
   if (!error && data) {
-    // Import email service using dynamic import to avoid circular dependencies
     try {
-      // Use fetch directly to send email notification
-      const response = await fetch('/api/email/listing-published', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: user.email,
-          listingDetails: {
-            title: data.name,
-            price: data.current_price,
-            image: data.images?.[0] || 'https://benchlot.com/images/placeholder-tool.jpg', // Default placeholder image
-            id: data.id
-          }
-        }),
+      // Log details to help diagnose the issue
+      console.log('Attempting to send listing published email', {
+        userEmail: user.email,
+        toolName: data.name,
+        toolId: data.id,
+        hasImages: !!data.images?.length
       });
       
-      // Log the result
-      const result = await response.json();
-      if (response.ok) {
-        console.log('Listing published email sent to:', user.email);
-      } else {
-        console.error('Error sending listing published email:', result.error);
+      // Try to send email with more detailed error logging
+      try {
+        // Use fetch directly to send email notification
+        const response = await fetch('/api/email/listing-published', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            email: user.email,
+            listingDetails: {
+              title: data.name,
+              price: data.current_price,
+              image: data.images?.[0] || 'https://benchlot.com/images/placeholder-tool.jpg', // Default placeholder image
+              id: data.id
+            }
+          }),
+        });
+        
+        // Log raw response information for debugging
+        console.log('Email API response status:', response.status);
+        console.log('Email API response status text:', response.statusText);
+        console.log('Email API response headers:', Object.fromEntries([...response.headers.entries()]));
+        
+        // Try to parse response JSON safely
+        let result;
+        try {
+          result = await response.json();
+          console.log('Email API response body:', result);
+        } catch (jsonError) {
+          console.error('Failed to parse JSON response from email API:', jsonError);
+          const text = await response.text();
+          console.log('Raw response text:', text);
+        }
+        
+        if (response.ok) {
+          console.log('Listing published email sent to:', user.email);
+        } else {
+          console.error('Error sending listing published email - server returned error');
+        }
+      } catch (fetchError) {
+        console.error('Network error when sending listing published email:', fetchError);
       }
     } catch (emailError) {
-      console.error('Error sending listing published email:', emailError);
+      console.error('Error in email send logic:', emailError);
       // Don't return error, as the listing creation was successful
     }
   }
