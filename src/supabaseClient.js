@@ -1427,6 +1427,24 @@ export const fetchCartItems = async (userId) => {
 //==============================================================================
 
 /**
+ * Helper function to test if a URL is accessible
+ * @param {string} url - URL to test
+ * @returns {Promise<boolean>} True if accessible, false otherwise
+ */
+export const isUrlAccessible = async (url) => {
+  if (!url) return false;
+  
+  try {
+    console.log(`Testing URL accessibility: ${url}`);
+    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+    return true; // If we get here, the request didn't throw
+  } catch (error) {
+    console.error(`URL access test failed for ${url}:`, error);
+    return false;
+  }
+};
+
+/**
  * Upload a profile image for a user with multiple bucket fallbacks and error handling
  * @param {File} file - Image file to upload
  * @param {string} userId - Optional user ID (defaults to current user)
@@ -1466,9 +1484,10 @@ export const uploadProfileImage = async (file, userId = null) => {
     const fileName = `user_${userId}_${timestamp}.${fileExt}`;
     
     // Define buckets to try in order of preference based on existing bucket structure
+    // Changing the order to try tool-images first which might have working CORS
     const buckets = [
-      { name: 'user-images', path: `avatars/${fileName}` },
-      { name: 'tool-images', path: `avatars/${fileName}` }
+      { name: 'tool-images', path: `avatars/${fileName}` },
+      { name: 'user-images', path: `avatars/${fileName}` }
     ];
     
     // Try each bucket in sequence until one works
@@ -1500,6 +1519,17 @@ export const uploadProfileImage = async (file, userId = null) => {
         
         publicUrl = url;
         console.log(`Successfully uploaded to ${bucket.name} bucket. URL:`, publicUrl);
+        
+        // Test URL accessibility
+        const isAccessible = await isUrlAccessible(publicUrl);
+        console.log(`URL accessibility test: ${isAccessible ? 'PASSED' : 'FAILED'}`);
+        
+        // Add a cache-busting parameter to the URL to prevent caching issues
+        if (publicUrl && publicUrl.includes('?')) {
+          publicUrl = `${publicUrl}&t=${Date.now()}`;
+        } else if (publicUrl) {
+          publicUrl = `${publicUrl}?t=${Date.now()}`;
+        }
         break; // Stop trying buckets
       } catch (error) {
         console.error(`Unexpected error uploading to ${bucket.name} bucket:`, error);
@@ -1539,19 +1569,32 @@ export const uploadProfileImage = async (file, userId = null) => {
 // Helper function to update user profile with new avatar URL
 async function updateUserWithNewAvatar(userId, publicUrl) {
   try {
-    const { error: updateError } = await supabase
+    console.log(`Updating user ${userId} with new avatar URL: ${publicUrl}`);
+    
+    // Ensure the URL has a cache-busting parameter
+    let urlWithCacheBusting = publicUrl;
+    if (publicUrl && publicUrl.includes('?')) {
+      urlWithCacheBusting = `${publicUrl}&t=${Date.now()}`;
+    } else if (publicUrl) {
+      urlWithCacheBusting = `${publicUrl}?t=${Date.now()}`;
+    }
+    
+    // Update the user profile
+    const { data, error: updateError } = await supabase
       .from('users')
       .update({ 
-        avatar_url: publicUrl
+        avatar_url: urlWithCacheBusting
       })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('avatar_url');
       
     if (updateError) {
       console.error('Error updating user profile with new avatar:', updateError);
       throw updateError;
     }
     
-    console.log('Profile image uploaded successfully:', publicUrl);
+    console.log('Profile image updated in database. Result:', data);
+    return data;
   } catch (error) {
     console.error('Error in updateUserWithNewAvatar:', error);
     throw error;

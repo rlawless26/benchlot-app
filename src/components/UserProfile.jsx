@@ -22,7 +22,8 @@ import {
   fetchUserReviews,
   updateUserProfile,
   uploadProfileImage,
-  sendMessage
+  sendMessage,
+  isUrlAccessible
 } from '../supabaseClient';
 
 
@@ -63,6 +64,12 @@ const UserProfile = () => {
       console.log("Starting profile fetch with ID param:", id);
       setLoading(true);
       setError(null);
+      
+      // Check environment variables
+      console.log("Environment check:", {
+        supabaseUrl: supabase?.supabaseUrl || 'Not available',
+        supabaseFunctions: Object.keys(supabase || {}).join(', ') || 'None found'
+      });
 
       try {
         // Get current user
@@ -156,6 +163,14 @@ const UserProfile = () => {
     console.log("Profile state updated:", profile);
     console.log("isCurrentUser state updated:", isCurrentUser);
     console.log("userListings updated:", userListings);
+    
+    // Check avatar URL accessibility if available
+    if (profile?.avatar_url) {
+      console.log("Testing avatar URL accessibility:", profile.avatar_url);
+      isUrlAccessible(profile.avatar_url).then(accessible => {
+        console.log(`Avatar URL accessibility test: ${accessible ? 'PASSED' : 'FAILED'}`);
+      });
+    }
   }, [profile, isCurrentUser, userListings]);
 
   // Handle edit form input changes
@@ -434,11 +449,11 @@ const UserProfile = () => {
                 <div className="flex items-center space-x-6">
                   {profile.avatar_url ? (
                     <img
-                      src={profile.avatar_url}
+                      src={`${profile.avatar_url}${profile.avatar_url.includes('?') ? '&' : '?'}cb=${Date.now()}`}
                       alt="Profile"
                       className="w-24 h-24 rounded-full object-cover"
                       onError={(e) => {
-                        console.log("Avatar image failed to load");
+                        console.log("Avatar image failed to load:", profile.avatar_url);
                         e.target.onerror = null; // Prevent infinite loop
                         e.target.src = getPlaceholderUrl(96, 96);
                       }}
@@ -507,11 +522,11 @@ const UserProfile = () => {
                 <div className="flex items-center space-x-6">
                   {profile.avatar_url ? (
                     <img
-                      src={profile.avatar_url}
+                      src={`${profile.avatar_url}${profile.avatar_url.includes('?') ? '&' : '?'}cb=${Date.now()}`}
                       alt="Profile"
                       className="w-24 h-24 rounded-full object-cover"
                       onError={(e) => {
-                        console.log("Other user avatar failed to load");
+                        console.log("Other user avatar failed to load:", profile.avatar_url);
                         e.target.onerror = null;
                         e.target.src = getPlaceholderUrl(96, 96);
                       }}
