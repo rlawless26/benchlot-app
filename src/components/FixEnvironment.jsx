@@ -29,33 +29,60 @@ const FixEnvironment = () => {
   }, [isFixed]);
   
   const fixEnvironment = () => {
-    // Implement environment fix
+    // Implement environment fix using the bootstrapper approach
     try {
-      window.BENCHLOT_ENV = {
-        // Supabase Configuration
-        SUPABASE_URL: 'https://tavhowcenicgowmdmbcz.supabase.co',
-        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2NlbmljZ293bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwNDc0ODYsImV4cCI6MjA1OTYyMzQ4Nn0.HcWzb8D9Jtq2CR-NJR2w8opgTDDM5n8TNeS1SyXXIXQ',
-        
-        // URL Configuration
-        API_URL: window.location.origin,
-        FRONTEND_URL: window.location.origin,
-        
-        // Version and Environment
+      // Create the core bootstrapper config object
+      window.__BENCHLOT_CORE_CONFIG = {
+        SUPABASE: {
+          URL: 'https://tavhowcenicgowmdmbcz.supabase.co',
+          ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2NlbmljZ293bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwNDc0ODYsImV4cCI6MjA1OTYyMzQ4Nn0.HcWzb8D9Jtq2CR-NJR2w8opgTDDM5n8TNeS1SyXXIXQ'
+        },
+        STRIPE: {
+          PUBLISHABLE_KEY: 'pk_test_51P29RaPR4wII8V1WXoTNVpd1yb75ZfGRYawssFvs3CMVW1J7g3CL8gqiIDnOZJFJgGYb9T1CXGPQGppnqeU28wBz00qoZ31GRN'
+        },
+        API: {
+          URL: 'https://www.benchlot.com'
+        },
+        FRONTEND: {
+          URL: 'https://www.benchlot.com'
+        },
+        ENV: 'production',
         VERSION: '1.0.0',
-        ENVIRONMENT: 'production',
         TIMESTAMP: new Date().toISOString()
       };
       
-      // Also set in React App format
-      window.REACT_APP_SUPABASE_URL = window.BENCHLOT_ENV.SUPABASE_URL;
-      window.REACT_APP_SUPABASE_ANON_KEY = window.BENCHLOT_ENV.SUPABASE_ANON_KEY;
-      window.REACT_APP_API_URL = window.BENCHLOT_ENV.API_URL;
-      window.REACT_APP_FRONTEND_URL = window.BENCHLOT_ENV.FRONTEND_URL;
+      // For local development, use the current origin
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        window.__BENCHLOT_CORE_CONFIG.API.URL = window.location.origin;
+        window.__BENCHLOT_CORE_CONFIG.FRONTEND.URL = window.location.origin;
+        window.__BENCHLOT_CORE_CONFIG.ENV = 'development';
+      }
+      
+      // Populate BENCHLOT_ENV format (used by newer code)
+      window.BENCHLOT_ENV = {
+        SUPABASE_URL: window.__BENCHLOT_CORE_CONFIG.SUPABASE.URL,
+        SUPABASE_ANON_KEY: window.__BENCHLOT_CORE_CONFIG.SUPABASE.ANON_KEY,
+        STRIPE_PUBLISHABLE_KEY: window.__BENCHLOT_CORE_CONFIG.STRIPE.PUBLISHABLE_KEY,
+        API_URL: window.__BENCHLOT_CORE_CONFIG.API.URL,
+        FRONTEND_URL: window.__BENCHLOT_CORE_CONFIG.FRONTEND.URL,
+        VERSION: window.__BENCHLOT_CORE_CONFIG.VERSION,
+        ENVIRONMENT: window.__BENCHLOT_CORE_CONFIG.ENV,
+        TIMESTAMP: window.__BENCHLOT_CORE_CONFIG.TIMESTAMP
+      };
+      
+      // React App format (for backward compatibility)
+      window.REACT_APP_SUPABASE_URL = window.__BENCHLOT_CORE_CONFIG.SUPABASE.URL;
+      window.REACT_APP_SUPABASE_ANON_KEY = window.__BENCHLOT_CORE_CONFIG.SUPABASE.ANON_KEY;
+      window.REACT_APP_STRIPE_PUBLISHABLE_KEY = window.__BENCHLOT_CORE_CONFIG.STRIPE.PUBLISHABLE_KEY;
+      window.REACT_APP_API_URL = window.__BENCHLOT_CORE_CONFIG.API.URL;
+      window.REACT_APP_FRONTEND_URL = window.__BENCHLOT_CORE_CONFIG.FRONTEND.URL;
       
       setIsFixed(true);
-      alert('Environment variables have been fixed. The page will now refresh.');
       
-      // Force refresh to apply changes
+      // Show success message
+      alert('Environment variables have been fixed. The page will now refresh to apply changes.');
+      
+      // Force reload to apply the new configuration
       setTimeout(() => {
         window.location.reload();
       }, 1000);

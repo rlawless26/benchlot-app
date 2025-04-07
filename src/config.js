@@ -4,22 +4,29 @@
  * This module provides a single source of truth for all configuration 
  * values and handles environment variables in a robust way that works 
  * in both development and production environments.
+ * 
+ * NOTE: The bootstrapper.js script should have already set up
+ * window.__BENCHLOT_CORE_CONFIG with guaranteed values.
  */
 
-// Default values - only used if environment variables completely fail
+// Check for global core config (which should be set by bootstrapper.js)
+const CORE_CONFIG = (typeof window !== 'undefined' && window.__BENCHLOT_CORE_CONFIG) ? 
+  window.__BENCHLOT_CORE_CONFIG : null;
+
+// Default values - only used if both bootstrapper and environment variables fail
 const DEFAULT_CONFIG = {
   supabase: {
-    url: 'https://tavhowcenicgowmdmbcz.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2NlbmljZ293bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwNDc0ODYsImV4cCI6MjA1OTYyMzQ4Nn0.HcWzb8D9Jtq2CR-NJR2w8opgTDDM5n8TNeS1SyXXIXQ'
+    url: CORE_CONFIG ? CORE_CONFIG.SUPABASE.URL : 'https://tavhowcenicgowmdmbcz.supabase.co',
+    anonKey: CORE_CONFIG ? CORE_CONFIG.SUPABASE.ANON_KEY : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2NlbmljZ293bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwNDc0ODYsImV4cCI6MjA1OTYyMzQ4Nn0.HcWzb8D9Jtq2CR-NJR2w8opgTDDM5n8TNeS1SyXXIXQ'
   },
   stripe: {
-    publishableKey: 'pk_test_51P29RaPR4wII8V1WXoTNVpd1yb75ZfGRYawssFvs3CMVW1J7g3CL8gqiIDnOZJFJgGYb9T1CXGPQGppnqeU28wBz00qoZ31GRN'
+    publishableKey: CORE_CONFIG ? CORE_CONFIG.STRIPE.PUBLISHABLE_KEY : 'pk_test_51P29RaPR4wII8V1WXoTNVpd1yb75ZfGRYawssFvs3CMVW1J7g3CL8gqiIDnOZJFJgGYb9T1CXGPQGppnqeU28wBz00qoZ31GRN'
   },
   urls: {
-    api: 'https://www.benchlot.com',
-    frontend: 'https://www.benchlot.com'
+    api: CORE_CONFIG ? CORE_CONFIG.API.URL : 'https://www.benchlot.com',
+    frontend: CORE_CONFIG ? CORE_CONFIG.FRONTEND.URL : 'https://www.benchlot.com'
   },
-  environment: process.env.NODE_ENV || 'production'
+  environment: CORE_CONFIG ? CORE_CONFIG.ENV : (process.env.NODE_ENV || 'production')
 };
 
 /**

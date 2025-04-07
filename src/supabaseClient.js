@@ -2,31 +2,36 @@
 import { createClient } from '@supabase/supabase-js';
 import config from './config';
 
-// Initialize Supabase client with configuration from multiple sources
-let supabaseUrl = config.supabase.url;
-let supabaseKey = config.supabase.anonKey;
+// Initialize Supabase client with configuration 
+// The bootstrapper.js script should have already guaranteed these values are available
+// and the config module should have properly captured them
+const supabaseUrl = config.supabase.url;
+const supabaseKey = config.supabase.anonKey;
 
-// Try to get from window.BENCHLOT_ENV for more reliability
-if (typeof window !== 'undefined' && window.BENCHLOT_ENV) {
-  if (window.BENCHLOT_ENV.SUPABASE_URL) {
-    supabaseUrl = window.BENCHLOT_ENV.SUPABASE_URL;
-  }
-  if (window.BENCHLOT_ENV.SUPABASE_ANON_KEY) {
-    supabaseKey = window.BENCHLOT_ENV.SUPABASE_ANON_KEY;
-  }
-}
-
-// Direct fallback with hardcoded values if everything else fails
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('⚠️ Using hardcoded Supabase credentials as final fallback');
-  supabaseUrl = 'https://tavhowcenicgowmdmbcz.supabase.co';
-  supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2NlbmljZ293bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwNDc0ODYsImV4cCI6MjA1OTYyMzQ4Nn0.HcWzb8D9Jtq2CR-NJR2w8opgTDDM5n8TNeS1SyXXIXQ';
-}
-
-// Debug environment variables
+// Log initialization details
 console.log('Supabase initialization:');
 console.log('- URL:', supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'Missing');
 console.log('- Key:', supabaseKey ? `${supabaseKey.substring(0, 15)}...` : 'Missing');
+console.log('- Global Config Available:', typeof window !== 'undefined' && window.__BENCHLOT_CORE_CONFIG ? 'Yes' : 'No');
+
+// Extra verification - if we still don't have credentials, something is very wrong
+if (!supabaseUrl || !supabaseKey) {
+  console.error('⛔ CRITICAL ERROR: Supabase credentials not available despite bootstrapper');
+  if (typeof window !== 'undefined') {
+    // Add a visible error to the DOM for easier troubleshooting
+    const errorDiv = document.createElement('div');
+    errorDiv.style.position = 'fixed';
+    errorDiv.style.top = '0';
+    errorDiv.style.left = '0';
+    errorDiv.style.right = '0';
+    errorDiv.style.backgroundColor = '#f44336';
+    errorDiv.style.color = 'white';
+    errorDiv.style.padding = '10px';
+    errorDiv.style.zIndex = '9999';
+    errorDiv.textContent = 'Configuration Error: Missing Supabase credentials. Please check the console.';
+    document.body.appendChild(errorDiv);
+  }
+}
 
 /**
  * Create a robust Supabase client with error handling
