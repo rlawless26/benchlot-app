@@ -320,18 +320,15 @@
       
       // Try to extract Supabase credentials from the page
       let supabaseUrl = window.REACT_APP_SUPABASE_URL || 'https://tavhowcenicgowmdmbcz.supabase.co';
-      let supabaseKey = window.REACT_APP_SUPABASE_ANON_KEY || '';
+      let supabaseKey = window.REACT_APP_SUPABASE_ANON_KEY || window.BENCHLOT_ENV?.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2NlbmljZ293bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwNDc0ODYsImV4cCI6MjA1OTYyMzQ4Nn0.HcWzb8D9Jtq2CR-NJR2w8opgTDDM5n8TNeS1SyXXIXQ';
       
-      if (!supabaseKey) {
-        resultElement.innerHTML = `
-          <p class="status error">❌ Cannot test marketplace data: Supabase key not found</p>
-          <p>This test requires the Supabase anon key to be available.</p>
-        `;
-        return;
+      // Always have a key now, but log if we're using the hardcoded fallback
+      if (supabaseKey !== window.REACT_APP_SUPABASE_ANON_KEY && supabaseKey !== window.BENCHLOT_ENV?.SUPABASE_ANON_KEY) {
+        console.warn('Using hardcoded fallback key for marketplace test');
       }
       
       // Make a direct request to Supabase to fetch tools data
-      fetch(`${supabaseUrl}/rest/v1/tools?select=*&limit=5&is_sold=eq.false`, {
+      fetch(`${supabaseUrl}/rest/v1/tools?select=id,name,description,current_price,images&limit=5&is_sold=eq.false`, {
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseKey,

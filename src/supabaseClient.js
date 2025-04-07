@@ -527,7 +527,7 @@ export const fetchTools = async (options = {}) => {
     // Start building query
     let query = supabase.from('tools').select(`
       *,
-      seller:seller_id(id, username, full_name, avatar_url, location, is_verified)
+      seller:seller_id(id, username, full_name, avatar_url, location, stripe_account_status)
     `);
     
     // Apply filters
@@ -655,7 +655,7 @@ export const fetchToolById = async (id) => {
       .from('tools')
       .select(`
         *,
-        seller:seller_id(id, username, full_name, avatar_url, location, is_verified)
+        seller:seller_id(id, username, full_name, avatar_url, location, stripe_account_status)
       `)
       .eq('id', id)
       .single();
@@ -1883,7 +1883,7 @@ export const fetchSimilarTools = async (toolId, category, limit = 3) => {
         subcategory,
         brand,
         is_verified,
-        seller:seller_id(id, username, full_name, avatar_url, location, is_verified)
+        seller:seller_id(id, username, full_name, avatar_url, location, stripe_account_status)
       `)
       .eq('category', category)
       .neq('id', toolId)
