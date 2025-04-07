@@ -23,12 +23,18 @@ import {
   updateUserProfile,
   uploadProfileImage,
   sendMessage,
-  isUrlAccessible
+  isUrlAccessible,
+  checkEnvironment,
+  checkSupabaseConnection
 } from '../supabaseClient';
+
+// Import application config
+import config from '../config';
 
 
 import ToolListingCard from './ToolListingCard';
 import MessageBanner from './MessageBanner';
+import FixEnvironment from './FixEnvironment';
 
 const UserProfile = () => {
   const { id } = useParams();
@@ -39,6 +45,7 @@ const UserProfile = () => {
   const [userReviews, setUserReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [envError, setEnvError] = useState(false);
 
   // Edit profile state
   const [isEditing, setIsEditing] = useState(false);
@@ -66,10 +73,20 @@ const UserProfile = () => {
       setError(null);
       
       // Check environment variables
-      console.log("Environment check:", {
-        supabaseUrl: supabase?.supabaseUrl || 'Not available',
-        supabaseFunctions: Object.keys(supabase || {}).join(', ') || 'None found'
-      });
+      // Run the environment check
+      const envStatus = checkEnvironment();
+      
+      // Check Supabase connection
+      const connectionStatus = await checkSupabaseConnection();
+      console.log('Supabase connection status:', connectionStatus);
+      
+      // Check if environment is properly set up
+      if (!connectionStatus.success || !window.BENCHLOT_ENV) {
+        console.error('Environment error detected, showing diagnostic component');
+        setEnvError(true);
+        setLoading(false);
+        return; // Exit early to show environment fix component
+      }
 
       try {
         // Get current user
@@ -273,12 +290,32 @@ const UserProfile = () => {
     return `https://placehold.co/${width}x${height}`;
   };
 
-  console.log("Pre-render state check:", { loading, error, profile, isCurrentUser });
+  console.log("Pre-render state check:", { loading, error, envError, profile, isCurrentUser });
+
+  if (envError) {
+    return (
+      <div className="bg-base min-h-screen">
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md mb-6 flex items-start">
+            <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+            <span>Environment configuration issues detected. Please use the tool below to fix them.</span>
+          </div>
+          
+          <FixEnvironment />
+          
+          <div className="text-center mt-8">
+            <Link to="/" className="text-forest-700 hover:text-forest-800 underline">
+              Return to Homepage
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
       <div className="bg-base min-h-screen">
-
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 text-forest-700 animate-spin" />
@@ -292,7 +329,6 @@ const UserProfile = () => {
   if (error) {
     return (
       <div className="bg-base min-h-screen">
- 
         <main className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6 flex items-start">
             <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />

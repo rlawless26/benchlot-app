@@ -2,9 +2,26 @@
 import { createClient } from '@supabase/supabase-js';
 import config from './config';
 
-// Initialize Supabase client with configuration from centralized config
-const supabaseUrl = config.supabase.url;
-const supabaseKey = config.supabase.anonKey;
+// Initialize Supabase client with configuration from multiple sources
+let supabaseUrl = config.supabase.url;
+let supabaseKey = config.supabase.anonKey;
+
+// Try to get from window.BENCHLOT_ENV for more reliability
+if (typeof window !== 'undefined' && window.BENCHLOT_ENV) {
+  if (window.BENCHLOT_ENV.SUPABASE_URL) {
+    supabaseUrl = window.BENCHLOT_ENV.SUPABASE_URL;
+  }
+  if (window.BENCHLOT_ENV.SUPABASE_ANON_KEY) {
+    supabaseKey = window.BENCHLOT_ENV.SUPABASE_ANON_KEY;
+  }
+}
+
+// Direct fallback with hardcoded values if everything else fails
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Using hardcoded Supabase credentials as final fallback');
+  supabaseUrl = 'https://tavhowcenicgowmdmbcz.supabase.co';
+  supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhdmhvd2NlbmljZ293bWRtYmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQwNDc0ODYsImV4cCI6MjA1OTYyMzQ4Nn0.HcWzb8D9Jtq2CR-NJR2w8opgTDDM5n8TNeS1SyXXIXQ';
+}
 
 // Debug environment variables
 console.log('Supabase initialization:');
@@ -72,6 +89,34 @@ export const checkSupabaseConnection = async () => {
       type: 'exception'
     };
   }
+};
+
+/**
+ * Check environment variable setup
+ * @returns {Object} Environment status information
+ */
+export const checkEnvironment = () => {
+  // General environment check
+  const envCheck = {
+    reactApp: {
+      supabaseUrl: process.env.REACT_APP_SUPABASE_URL || window.REACT_APP_SUPABASE_URL || 'Not found',
+      supabaseKey: (process.env.REACT_APP_SUPABASE_ANON_KEY || window.REACT_APP_SUPABASE_ANON_KEY) ? 'Present (not shown)' : 'Not found',
+      apiUrl: process.env.REACT_APP_API_URL || window.REACT_APP_API_URL || 'Not found',
+      frontendUrl: process.env.REACT_APP_FRONTEND_URL || window.REACT_APP_FRONTEND_URL || 'Not found',
+    },
+    benchlot: window.BENCHLOT_ENV ? 'Available' : 'Not available',
+    supabaseClient: {
+      url: supabaseUrl ? supabaseUrl : 'Not available',
+      key: supabaseKey ? 'Present (not shown)' : 'Not available',
+      methods: Object.keys(supabase || {}).length,
+      initialized: supabase?.auth ? 'Yes' : 'No'
+    },
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log('Environment check:', envCheck);
+  return envCheck;
 };
 
 //==============================================================================
