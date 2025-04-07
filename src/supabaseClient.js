@@ -74,6 +74,10 @@ export const checkSupabaseConnection = async () => {
   }
 };
 
+//==============================================================================
+// USER AUTHENTICATION & PROFILE FUNCTIONS
+//==============================================================================
+
 /**
  * Get the current user with profile data from Supabase
  * @returns {Object} Current user data with profile
@@ -339,3 +343,878 @@ export const signOut = async () => {
     return { error };
   }
 };
+
+/**
+ * Update user profile data
+ * @param {string} userId - User ID
+ * @param {Object} profileData - User profile data to update
+ * @returns {Object} Updated profile data or error
+ */
+export const updateUserProfile = async (userId, profileData) => {
+  try {
+    console.log(`Updating profile for user ${userId}`);
+    
+    if (!userId) {
+      return { error: { message: 'User ID is required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('users')
+      .update(profileData)
+      .eq('id', userId)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error updating user profile:', error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in updateUserProfile:', error);
+    return { error };
+  }
+};
+
+//==============================================================================
+// TOOL LISTING FUNCTIONS
+//==============================================================================
+
+/**
+ * Fetch tools with optional filtering
+ * @param {Object} options - Filter options
+ * @returns {Object} Array of tools or error
+ */
+export const fetchTools = async (options = {}) => {
+  try {
+    console.log('Fetching tools with options:', options);
+    
+    // Start building query
+    let query = supabase.from('tools').select(`
+      *,
+      seller:seller_id(id, username, full_name, avatar_url, location, is_verified)
+    `);
+    
+    // Apply filters
+    if (options.featured === true) {
+      query = query.eq('is_featured', true);
+    }
+    
+    if (options.category) {
+      query = query.eq('category', options.category);
+    }
+    
+    if (options.subcategory) {
+      query = query.eq('subcategory', options.subcategory);
+    }
+    
+    if (options.is_sold !== undefined) {
+      query = query.eq('is_sold', options.is_sold);
+    }
+    
+    if (options.verified === true) {
+      query = query.eq('is_verified', true);
+    }
+    
+    if (options.sellerId) {
+      query = query.eq('seller_id', options.sellerId);
+    }
+    
+    if (options.search) {
+      query = query.ilike('name', `%${options.search}%`);
+    }
+    
+    if (options.minPrice) {
+      query = query.gte('current_price', options.minPrice);
+    }
+    
+    if (options.maxPrice) {
+      query = query.lte('current_price', options.maxPrice);
+    }
+    
+    if (options.condition && Array.isArray(options.condition) && options.condition.length > 0) {
+      query = query.in('condition', options.condition);
+    }
+    
+    // Pagination
+    if (options.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    if (options.offset) {
+      query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+    }
+    
+    // Sorting
+    if (options.sort) {
+      switch (options.sort) {
+        case 'newest':
+          query = query.order('created_at', { ascending: false });
+          break;
+        case 'oldest':
+          query = query.order('created_at', { ascending: true });
+          break;
+        case 'price-asc':
+          query = query.order('current_price', { ascending: true });
+          break;
+        case 'price-desc':
+          query = query.order('current_price', { ascending: false });
+          break;
+        default:
+          query = query.order('created_at', { ascending: false });
+      }
+    } else {
+      // Default to newest first
+      query = query.order('created_at', { ascending: false });
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching tools:', error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchTools:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch featured tools
+ * @param {number} limit - Number of tools to fetch
+ * @returns {Object} Array of featured tools or error
+ */
+export const fetchFeaturedTools = async (limit = 6) => {
+  try {
+    console.log(`Fetching featured tools, limit: ${limit}`);
+    
+    return await fetchTools({
+      featured: true,
+      is_sold: false,
+      limit,
+      sort: 'newest'
+    });
+  } catch (error) {
+    console.error('Unexpected error in fetchFeaturedTools:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch a tool by ID
+ * @param {string} id - Tool ID
+ * @returns {Object} Tool data or error
+ */
+export const fetchToolById = async (id) => {
+  try {
+    console.log(`Fetching tool with ID: ${id}`);
+    
+    if (!id) {
+      return { error: { message: 'Tool ID is required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('tools')
+      .select(`
+        *,
+        seller:seller_id(id, username, full_name, avatar_url, location, is_verified)
+      `)
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      console.error(`Error fetching tool with ID ${id}:`, error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchToolById:', error);
+    return { error };
+  }
+};
+
+/**
+ * Create a new tool listing
+ * @param {Object} toolData - Tool data
+ * @returns {Object} Created tool data or error
+ */
+export const createTool = async (toolData) => {
+  try {
+    console.log('Creating new tool with data:', toolData);
+    
+    // Input validation
+    if (!toolData.name || !toolData.current_price || !toolData.seller_id) {
+      return { error: { message: 'Name, price, and seller ID are required' } };
+    }
+    
+    // Set defaults for common fields if not provided
+    const tool = {
+      created_at: new Date().toISOString(),
+      is_sold: false,
+      is_featured: false,
+      is_verified: false,
+      views: 0,
+      ...toolData
+    };
+    
+    const { data, error } = await supabase
+      .from('tools')
+      .insert(tool)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating tool:', error);
+      return { error };
+    }
+    
+    console.log('Tool created successfully:', data.id);
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in createTool:', error);
+    return { error };
+  }
+};
+
+/**
+ * Update a tool listing
+ * @param {string} id - Tool ID
+ * @param {Object} updates - Tool data to update
+ * @returns {Object} Updated tool data or error
+ */
+export const updateTool = async (id, updates) => {
+  try {
+    console.log(`Updating tool ${id} with:`, updates);
+    
+    if (!id) {
+      return { error: { message: 'Tool ID is required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('tools')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error(`Error updating tool ${id}:`, error);
+      return { error };
+    }
+    
+    console.log('Tool updated successfully');
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in updateTool:', error);
+    return { error };
+  }
+};
+
+/**
+ * Delete a tool listing
+ * @param {string} id - Tool ID
+ * @returns {Object} Result of the operation
+ */
+export const deleteTool = async (id) => {
+  try {
+    console.log(`Deleting tool ${id}`);
+    
+    if (!id) {
+      return { error: { message: 'Tool ID is required' } };
+    }
+    
+    const { error } = await supabase
+      .from('tools')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      console.error(`Error deleting tool ${id}:`, error);
+      return { error };
+    }
+    
+    console.log('Tool deleted successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in deleteTool:', error);
+    return { error };
+  }
+};
+
+/**
+ * Upload a tool image
+ * @param {string} toolId - Tool ID
+ * @param {File} file - Image file to upload
+ * @param {number} position - Image position
+ * @returns {Object} Uploaded image data or error
+ */
+export const uploadToolImage = async (toolId, file, position = 0) => {
+  try {
+    console.log(`Uploading image for tool ${toolId} at position ${position}`);
+    
+    if (!toolId || !file) {
+      return { error: { message: 'Tool ID and file are required' } };
+    }
+    
+    // Generate a unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${toolId}/${position}_${Date.now()}.${fileExt}`;
+    const filePath = `tools/${fileName}`;
+    
+    // Upload the file to storage
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+      
+    if (uploadError) {
+      console.error(`Error uploading image:`, uploadError);
+      return { error: uploadError };
+    }
+    
+    // Get the public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath);
+    
+    // Update the tool with the new image
+    const { data: tool, error: toolError } = await supabase
+      .from('tools')
+      .select('images')
+      .eq('id', toolId)
+      .single();
+      
+    if (toolError) {
+      console.error(`Error fetching tool ${toolId}:`, toolError);
+      return { error: toolError };
+    }
+    
+    // Prepare the updated images array
+    let images = Array.isArray(tool.images) ? [...tool.images] : [];
+    if (position >= images.length) {
+      // Add to the end
+      images.push(publicUrl);
+    } else {
+      // Replace at position
+      images[position] = publicUrl;
+    }
+    
+    // Update the tool
+    const { error: updateError } = await supabase
+      .from('tools')
+      .update({ images })
+      .eq('id', toolId);
+      
+    if (updateError) {
+      console.error(`Error updating tool images:`, updateError);
+      return { error: updateError };
+    }
+    
+    console.log('Image uploaded successfully:', publicUrl);
+    return { data: { url: publicUrl, position } };
+  } catch (error) {
+    console.error('Unexpected error in uploadToolImage:', error);
+    return { error };
+  }
+};
+
+/**
+ * Remove a tool image
+ * @param {string} toolId - Tool ID
+ * @param {number} position - Image position to remove
+ * @returns {Object} Result of the operation
+ */
+export const removeToolImage = async (toolId, position) => {
+  try {
+    console.log(`Removing image at position ${position} for tool ${toolId}`);
+    
+    if (!toolId || position === undefined) {
+      return { error: { message: 'Tool ID and position are required' } };
+    }
+    
+    // Get the current images
+    const { data: tool, error: toolError } = await supabase
+      .from('tools')
+      .select('images')
+      .eq('id', toolId)
+      .single();
+      
+    if (toolError) {
+      console.error(`Error fetching tool ${toolId}:`, toolError);
+      return { error: toolError };
+    }
+    
+    if (!Array.isArray(tool.images) || position >= tool.images.length) {
+      return { error: { message: 'Image not found at the specified position' } };
+    }
+    
+    // Remove the image from array
+    const images = [...tool.images];
+    const removedUrl = images.splice(position, 1)[0];
+    
+    // Update the tool
+    const { error: updateError } = await supabase
+      .from('tools')
+      .update({ images })
+      .eq('id', toolId);
+      
+    if (updateError) {
+      console.error(`Error updating tool images:`, updateError);
+      return { error: updateError };
+    }
+    
+    // Try to delete the file from storage if it's a URL we can parse
+    try {
+      if (removedUrl && typeof removedUrl === 'string') {
+        const path = removedUrl.split('/').slice(-2).join('/');
+        if (path) {
+          await supabase.storage.from('images').remove([`tools/${path}`]);
+        }
+      }
+    } catch (removeError) {
+      console.warn('Could not remove file from storage:', removeError);
+      // Don't fail the operation if storage removal fails
+    }
+    
+    console.log('Image removed successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in removeToolImage:', error);
+    return { error };
+  }
+};
+
+//==============================================================================
+// WISHLIST FUNCTIONS
+//==============================================================================
+
+/**
+ * Add tool to wishlist
+ * @param {string} userId - User ID
+ * @param {string} toolId - Tool ID
+ * @returns {Object} Result of the operation
+ */
+export const addToWishlist = async (userId, toolId) => {
+  try {
+    console.log(`Adding tool ${toolId} to wishlist for user ${userId}`);
+    
+    if (!userId || !toolId) {
+      return { error: { message: 'User ID and Tool ID are required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('wishlists')
+      .insert({
+        user_id: userId,
+        tool_id: toolId,
+        added_at: new Date().toISOString()
+      })
+      .select();
+      
+    if (error) {
+      console.error('Error adding to wishlist:', error);
+      return { error };
+    }
+    
+    console.log('Added to wishlist successfully');
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in addToWishlist:', error);
+    return { error };
+  }
+};
+
+/**
+ * Remove tool from wishlist
+ * @param {string} userId - User ID
+ * @param {string} toolId - Tool ID
+ * @returns {Object} Result of the operation
+ */
+export const removeFromWishlist = async (userId, toolId) => {
+  try {
+    console.log(`Removing tool ${toolId} from wishlist for user ${userId}`);
+    
+    if (!userId || !toolId) {
+      return { error: { message: 'User ID and Tool ID are required' } };
+    }
+    
+    const { error } = await supabase
+      .from('wishlists')
+      .delete()
+      .match({ user_id: userId, tool_id: toolId });
+      
+    if (error) {
+      console.error('Error removing from wishlist:', error);
+      return { error };
+    }
+    
+    console.log('Removed from wishlist successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in removeFromWishlist:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch user's wishlist items
+ * @param {string} userId - User ID
+ * @returns {Object} Array of wishlist items or error
+ */
+export const fetchWishlistItems = async (userId) => {
+  try {
+    console.log(`Fetching wishlist for user ${userId}`);
+    
+    if (!userId) {
+      return { error: { message: 'User ID is required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('wishlists')
+      .select(`
+        id,
+        added_at,
+        tool:tool_id(
+          id,
+          name,
+          description,
+          current_price,
+          original_price,
+          condition,
+          is_sold,
+          is_verified,
+          images,
+          seller:seller_id(id, username, full_name, avatar_url)
+        )
+      `)
+      .eq('user_id', userId)
+      .order('added_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching wishlist:', error);
+      return { error };
+    }
+    
+    console.log(`Found ${data.length} wishlist items`);
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchWishlistItems:', error);
+    return { error };
+  }
+};
+
+/**
+ * Check if tool is in user's wishlist
+ * @param {string} userId - User ID
+ * @param {string} toolId - Tool ID
+ * @returns {Object} Boolean result or error
+ */
+export const isInWishlist = async (userId, toolId) => {
+  try {
+    console.log(`Checking if tool ${toolId} is in wishlist for user ${userId}`);
+    
+    if (!userId || !toolId) {
+      return { data: false };
+    }
+    
+    const { data, error } = await supabase
+      .from('wishlists')
+      .select('id')
+      .match({ user_id: userId, tool_id: toolId })
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error checking wishlist:', error);
+      return { error };
+    }
+    
+    return { data: !!data };
+  } catch (error) {
+    console.error('Unexpected error in isInWishlist:', error);
+    return { error };
+  }
+};
+
+//==============================================================================
+// MESSAGE FUNCTIONS
+//==============================================================================
+
+/**
+ * Send a message
+ * @param {Object} messageData - Message data
+ * @returns {Object} Created message or error
+ */
+export const sendMessage = async (messageData) => {
+  try {
+    console.log('Sending message:', messageData);
+    
+    if (!messageData.sender_id || !messageData.recipient_id || !messageData.content) {
+      return { error: { message: 'Sender ID, recipient ID, and content are required' } };
+    }
+    
+    const message = {
+      ...messageData,
+      created_at: new Date().toISOString(),
+      is_read: false
+    };
+    
+    const { data, error } = await supabase
+      .from('messages')
+      .insert(message)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error sending message:', error);
+      return { error };
+    }
+    
+    console.log('Message sent successfully:', data.id);
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in sendMessage:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch conversations for a user
+ * @param {string} userId - User ID
+ * @returns {Object} Array of conversations or error
+ */
+export const fetchConversations = async (userId) => {
+  try {
+    console.log(`Fetching conversations for user ${userId}`);
+    
+    if (!userId) {
+      return { error: { message: 'User ID is required' } };
+    }
+    
+    // Use RPC function to get conversations (you'd need to create this in Supabase)
+    const { data, error } = await supabase
+      .rpc('get_conversations', { user_id: userId });
+      
+    if (error) {
+      console.error('Error fetching conversations:', error);
+      return { error };
+    }
+    
+    console.log(`Found ${data.length} conversations`);
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchConversations:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch messages between two users
+ * @param {string} userId - Current user ID
+ * @param {string} otherUserId - Other user ID
+ * @returns {Object} Array of messages or error
+ */
+export const fetchMessages = async (userId, otherUserId) => {
+  try {
+    console.log(`Fetching messages between ${userId} and ${otherUserId}`);
+    
+    if (!userId || !otherUserId) {
+      return { error: { message: 'Both user IDs are required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        id,
+        content,
+        created_at,
+        is_read,
+        sender_id,
+        recipient_id,
+        sender:sender_id(id, username, full_name, avatar_url),
+        recipient:recipient_id(id, username, full_name, avatar_url)
+      `)
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .or(`sender_id.eq.${otherUserId},recipient_id.eq.${otherUserId}`)
+      .order('created_at', { ascending: true });
+      
+    if (error) {
+      console.error('Error fetching messages:', error);
+      return { error };
+    }
+    
+    // Filter to only include messages between these two users
+    const filteredMessages = data.filter(msg => 
+      (msg.sender_id === userId && msg.recipient_id === otherUserId) || 
+      (msg.sender_id === otherUserId && msg.recipient_id === userId)
+    );
+    
+    console.log(`Found ${filteredMessages.length} messages`);
+    return { data: filteredMessages };
+  } catch (error) {
+    console.error('Unexpected error in fetchMessages:', error);
+    return { error };
+  }
+};
+
+/**
+ * Mark messages as read
+ * @param {string} userId - User ID (recipient)
+ * @param {string} senderId - Sender ID
+ * @returns {Object} Result of the operation
+ */
+export const markMessagesAsRead = async (userId, senderId) => {
+  try {
+    console.log(`Marking messages from ${senderId} to ${userId} as read`);
+    
+    if (!userId || !senderId) {
+      return { error: { message: 'Both user IDs are required' } };
+    }
+    
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .match({ recipient_id: userId, sender_id: senderId, is_read: false });
+      
+    if (error) {
+      console.error('Error marking messages as read:', error);
+      return { error };
+    }
+    
+    console.log('Messages marked as read successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in markMessagesAsRead:', error);
+    return { error };
+  }
+};
+
+//==============================================================================
+// CART FUNCTIONS
+//==============================================================================
+
+/**
+ * Add tool to cart
+ * @param {string} userId - User ID
+ * @param {string} toolId - Tool ID
+ * @returns {Object} Result of the operation
+ */
+export const addToCart = async (userId, toolId) => {
+  try {
+    console.log(`Adding tool ${toolId} to cart for user ${userId}`);
+    
+    if (!userId || !toolId) {
+      return { error: { message: 'User ID and Tool ID are required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('cart_items')
+      .insert({
+        user_id: userId,
+        tool_id: toolId,
+        added_at: new Date().toISOString(),
+        quantity: 1
+      })
+      .select();
+      
+    if (error) {
+      console.error('Error adding to cart:', error);
+      return { error };
+    }
+    
+    console.log('Added to cart successfully');
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in addToCart:', error);
+    return { error };
+  }
+};
+
+/**
+ * Remove tool from cart
+ * @param {string} userId - User ID
+ * @param {string} toolId - Tool ID
+ * @returns {Object} Result of the operation
+ */
+export const removeFromCart = async (userId, toolId) => {
+  try {
+    console.log(`Removing tool ${toolId} from cart for user ${userId}`);
+    
+    if (!userId || !toolId) {
+      return { error: { message: 'User ID and Tool ID are required' } };
+    }
+    
+    const { error } = await supabase
+      .from('cart_items')
+      .delete()
+      .match({ user_id: userId, tool_id: toolId });
+      
+    if (error) {
+      console.error('Error removing from cart:', error);
+      return { error };
+    }
+    
+    console.log('Removed from cart successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in removeFromCart:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch user's cart items
+ * @param {string} userId - User ID
+ * @returns {Object} Array of cart items or error
+ */
+export const fetchCartItems = async (userId) => {
+  try {
+    console.log(`Fetching cart for user ${userId}`);
+    
+    if (!userId) {
+      return { error: { message: 'User ID is required' } };
+    }
+    
+    const { data, error } = await supabase
+      .from('cart_items')
+      .select(`
+        id,
+        quantity,
+        added_at,
+        tool:tool_id(
+          id,
+          name,
+          description,
+          current_price,
+          condition,
+          is_sold,
+          is_verified,
+          images,
+          seller:seller_id(id, username, full_name, avatar_url)
+        )
+      `)
+      .eq('user_id', userId)
+      .order('added_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching cart:', error);
+      return { error };
+    }
+    
+    console.log(`Found ${data.length} cart items`);
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchCartItems:', error);
+    return { error };
+  }
+};
+
+//==============================================================================
+// EXPORT ALL FUNCTIONS
+//==============================================================================
