@@ -1,11 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Star, MapPin, Check } from 'lucide-react';
-import { getToolImage } from '../utils/imageUtils';
+import ToolImage from './ToolImage';
 
 const ToolListingCard = ({ tool, featured = false }) => {
-  // Handle missing images by using a placeholder
-  const mainImage = getToolImage(tool, 0, 300, 200);
   
   // Format the price
   const formatPrice = (price) => {
@@ -27,15 +25,13 @@ const ToolListingCard = ({ tool, featured = false }) => {
       
       {/* Image */}
       <Link to={`/tool/${tool.id}`} className="block relative h-48">
-        <img 
-          src={mainImage} 
+        <ToolImage 
+          tool={tool}
+          index={0}
           alt={tool.name}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            console.log("Image failed to load:", mainImage);
-            e.target.onerror = null; // Prevent infinite error loop
-            e.target.src = '/api/placeholder/300/200'; // Fallback image
-          }}
+          width={300}
+          height={200}
         />
         
         {/* Verification badge */}

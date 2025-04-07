@@ -4,7 +4,7 @@ import {
   getCurrentUser,
   updateTool 
 } from '../supabaseClient';
-import { getToolImage } from '../utils/imageUtils';
+import ToolImage from './ToolImage';
 import { 
   Check, 
   X, 
@@ -179,10 +179,13 @@ const AdminFeaturedTools = () => {
             {featuredTools.map(tool => (
               <div key={tool.id} className="border rounded-lg overflow-hidden bg-white shadow-sm">
                 <div className="aspect-w-16 aspect-h-9 bg-stone-100">
-                  <img 
-                    src={getToolImage(tool, 0, 300, 200)} 
+                  <ToolImage 
+                    tool={tool}
+                    index={0}
                     alt={tool.name || "Tool"}
                     className="object-cover w-full h-40"
+                    width={300}
+                    height={200}
                   />
                 </div>
                 <div className="p-4">
@@ -250,10 +253,13 @@ const AdminFeaturedTools = () => {
             .map(tool => (
             <div key={tool.id} className="border rounded-lg overflow-hidden bg-white shadow-sm">
               <div className="aspect-w-16 aspect-h-9 bg-stone-100">
-                <img 
-                  src={getToolImage(tool, 0, 300, 200)} 
+                <ToolImage 
+                  tool={tool}
+                  index={0} 
                   alt={tool.name || "Tool"}
                   className="object-cover w-full h-40"
+                  width={300}
+                  height={200}
                 />
               </div>
               <div className="p-4">

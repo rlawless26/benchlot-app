@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getToolImage } from '../utils/imageUtils';
+import ToolImage from '../components/ToolImage';
 import {
   Heart,
   Share,
@@ -343,10 +343,13 @@ const handleMakeOffer = () => {
           {/* Tool info */}
           <div className="flex items-center mb-6">
             <div className="w-16 h-16 bg-stone-100 rounded overflow-hidden">
-              <img
-                src={getToolImage(tool, 0, 80, 80)}
+              <ToolImage
+                tool={tool}
+                index={0}
                 alt={tool.name || "Tool image"}
                 className="w-full h-full object-cover"
+                width={80}
+                height={80}
               />
             </div>
             <div className="ml-3 overflow-hidden">
@@ -520,10 +523,13 @@ const handleMakeOffer = () => {
             {/* Main image with error handling */}
             <div className="bg-white rounded-lg overflow-hidden shadow-md relative">
               {tool.images && tool.images.length > 0 ? (
-                <img
-                  src={getToolImage(tool, activeImageIndex, 400, 300)}
+                <ToolImage
+                  tool={tool}
+                  index={activeImageIndex}
                   alt={tool.name || "Tool image"}
                   className="w-full h-96 object-contain"
+                  width={400}
+                  height={300}
                 />
               ) : (
                 <div className="w-full h-96 bg-stone-100 flex items-center justify-center">
@@ -567,10 +573,13 @@ const handleMakeOffer = () => {
                     className={`w-20 h-20 rounded-md overflow-hidden border-2 ${index === activeImageIndex ? 'border-forest-700' : 'border-transparent'}`}
                     onClick={() => setActiveImageIndex(index)}
                   >
-                    <img
-                      src={image || getToolImage(tool, index, 80, 80)}
+                    <ToolImage
+                      tool={{...tool, images: [image]}}
+                      index={0}
                       alt={`${tool.name || "Tool"} thumbnail ${index + 1}`}
                       className="w-full h-full object-cover"
+                      width={80}
+                      height={80}
                     />
                   </button>
                 ))}
@@ -791,10 +800,13 @@ const handleMakeOffer = () => {
                 <div key={similarTool.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                   <a href={`/tool/${similarTool.id}`} className="block">
                     <div className="relative h-48">
-                      <img
-                        src={getToolImage(similarTool, 0, 300, 200)}
+                      <ToolImage
+                        tool={similarTool}
+                        index={0}
                         alt={similarTool.name || "Similar tool"}
                         className="w-full h-full object-cover"
+                        width={300}
+                        height={200}
                       />
                     </div>
                     <div className="p-4">
