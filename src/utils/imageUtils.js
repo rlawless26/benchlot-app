@@ -1,114 +1,93 @@
-// Utility functions for handling images and placeholders
+/**
+ * Utilities for handling images and storage URLs in a standardized way
+ */
+
+// Base URL for Supabase storage
+const STORAGE_BASE_URL = 'https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public';
 
 /**
- * Get a placeholder image URL that works in both development and production
- * 
- * @param {number} width - Width of the placeholder image
- * @param {number} height - Height of the placeholder image
- * @returns {string} - URL to placeholder image
+ * Generate a standardized public URL for Supabase storage
+ * @param {string} bucket - The storage bucket name
+ * @param {string} path - The path within the bucket
+ * @returns {string} - The complete public URL
  */
-export const getPlaceholderImage = (width, height) => {
-  // Use full URL in development to avoid CORS issues, relative in production
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? '' 
-    : process.env.REACT_APP_API_URL || 'http://localhost:3001';
-  
-  return `${baseUrl}/api/placeholder/${width}/${height}`;
-};
+export function getStorageUrl(bucket, path) {
+  if (!bucket || !path) {
+    console.error('Missing bucket or path for storage URL');
+    return null;
+  }
+  return `${STORAGE_BASE_URL}/${bucket}/${path}`;
+}
 
 /**
- * Fix a Supabase storage URL to ensure it's properly formatted
- * Converts signed URLs to public URLs to avoid token expiration issues
- * 
- * @param {string} url - The original URL from Supabase
- * @returns {string} - Fixed URL that should work reliably
+ * Get a URL for a user's avatar
+ * @param {string} userId - The user's ID
+ * @param {string} fileExtension - The file extension (default: jpg)
+ * @returns {string} - The public URL for the user's avatar
  */
-export const fixStorageUrl = (url) => {
+export function getUserAvatarUrl(userId, fileExtension = 'jpg') {
+  if (!userId) return null;
+  return getStorageUrl('user-images', `avatars/user_${userId}.${fileExtension}`);
+}
+
+/**
+ * Get a URL for a tool image
+ * @param {string} toolId - The tool's ID
+ * @param {number} position - The image position (default: 0)
+ * @param {string} fileExtension - The file extension (default: jpg)
+ * @returns {string} - The public URL for the tool image
+ */
+export function getToolImageUrl(toolId, position = 0, fileExtension = 'jpg') {
+  if (!toolId) return null;
+  return getStorageUrl('tool-images', `tools/${toolId}/${toolId}_${position}.${fileExtension}`);
+}
+
+/**
+ * Fix any Supabase URL to ensure it uses the public endpoint
+ * @param {string} url - The URL to fix
+ * @returns {string} - The fixed URL
+ */
+export function fixStorageUrl(url) {
   if (!url) return url;
   
   try {
-    // Parse the URL to handle it properly
-    const urlObj = new URL(url);
-    
-    // Check if it's a signed URL (contains /object/sign/)
-    const isSignedUrl = urlObj.pathname.includes('/object/sign/');
-    
-    // If it's a signed URL, convert it to a public URL
-    if (isSignedUrl) {
-      // Replace '/object/sign/' with '/object/public/'
-      const publicPath = urlObj.pathname.replace('/object/sign/', '/object/public/');
-      urlObj.pathname = publicPath;
-      
-      // Remove JWT token query parameter if it exists
-      urlObj.searchParams.delete('token');
-      
-      console.log(`Converted signed URL to public URL: ${urlObj.toString()}`);
+    // Special case for the problematic 'svg' URL
+    if (url.includes('/avatars/svg')) {
+      return getStorageUrl('user-images', 'avatars/default-avatar.svg');
     }
     
-    // Remove any existing cache buster parameters
-    urlObj.searchParams.delete('t');
-    urlObj.searchParams.delete('cb');
-    
-    // Add a fresh cache buster with unique value
-    const cacheBuster = Date.now().toString();
-    urlObj.searchParams.set('cb', cacheBuster);
-    
-    return urlObj.toString();
-  } catch (e) {
-    console.warn('URL parsing failed:', e);
-    
-    // Simple approach for malformed URLs
+    // Convert signed URLs to public URLs
     if (url.includes('/object/sign/')) {
-      // Replace /object/sign/ with /object/public/ and remove token parameter
-      const baseUrl = url.replace('/object/sign/', '/object/public/').split('?')[0];
-      return `${baseUrl}?cb=${Date.now()}`;
+      return url.replace('/object/sign/', '/object/public/').split('?')[0];
     }
     
-    // Add cache buster to the URL
-    const cacheBuster = Date.now();
-    return url.includes('?') 
-      ? `${url.split('?')[0]}?cb=${cacheBuster}` 
-      : `${url}?cb=${cacheBuster}`;
+    // For URLs that already have the correct format, just ensure no query parameters
+    if (url.includes('supabase') && url.includes('?')) {
+      return url.split('?')[0];
+    }
+    
+    return url;
+  } catch (error) {
+    console.warn('Error fixing storage URL:', error);
+    return url;
   }
-};
+}
 
 /**
- * Get image URL for a tool, with fallback to placeholder
- * 
- * @param {object} tool - Tool object with images array
- * @param {number} index - Index of image to retrieve (default 0)
- * @param {number} width - Width for placeholder (default 300)
- * @param {number} height - Height for placeholder (default 200)
- * @returns {string} - URL to tool image or placeholder
+ * Generate a placeholder image URL
+ * @param {number} width - Width in pixels
+ * @param {number} height - Height in pixels
+ * @param {string} text - Text to display on the placeholder
+ * @returns {string} - Placeholder image URL
  */
-export const getToolImage = (tool, index = 0, width = 300, height = 200) => {
-  if (!tool || !tool.images || tool.images.length === 0 || !tool.images[index]) {
-    return getPlaceholderImage(width, height);
-  }
-  
-  // Fix the URL to ensure it works properly
-  return fixStorageUrl(tool.images[index]);
-};
-
-/**
- * Get profile image URL with fallback
- * 
- * @param {object} user - User object with avatar_url
- * @param {number} size - Size for placeholder (default 50)
- * @returns {string} - URL to profile image or placeholder
- */
-export const getProfileImage = (user, size = 50) => {
-  if (!user || !user.avatar_url) {
-    return getPlaceholderImage(size, size);
-  }
-  
-  // Fix the URL to ensure it works properly
-  return fixStorageUrl(user.avatar_url);
-};
+export function getPlaceholderUrl(width = 300, height = 200, text = 'Placeholder') {
+  return `https://via.placeholder.com/${width}x${height}/CCCCCC/333333?text=${encodeURIComponent(text)}`;
+}
 
 export default {
-  getPlaceholderImage,
-  getToolImage,
-  getProfileImage,
-  fixStorageUrl
+  getStorageUrl,
+  getUserAvatarUrl,
+  getToolImageUrl,
+  fixStorageUrl,
+  getPlaceholderUrl
 };

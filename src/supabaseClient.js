@@ -861,11 +861,8 @@ export const uploadToolImage = async (toolId, file, position = 0) => {
       return { error: uploadError };
     }
     
-    // Get the public URL (always use public URLs, not signed URLs)
-    const { data: { publicUrl } } = supabase.storage
-      .from('images')
-      .getPublicUrl(filePath);
-      
+    // Get the public URL (using the standardized format to avoid signed URLs)
+    const publicUrl = `https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/images/${filePath}`;
     console.log(`Tool image public URL: ${publicUrl}`);
     
     // Update the tool with the new image
@@ -1567,170 +1564,65 @@ export const uploadProfileImage = async (file, userId = null) => {
       return { error: { message: 'File size must be less than 2MB' } };
     }
     
-    // Generate a unique filename - simplify to avoid directory structure issues
+    // Generate a unique filename with consistent naming pattern
     const timestamp = Date.now();
     const fileExt = file.name.split('.').pop();
     const fileName = `user_${userId}_${timestamp}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+    const bucket = 'user-images';
     
-    // Define buckets to try in order of preference based on existing bucket structure
-    // For user profile images, we should use:
-    // - user-images bucket: This is the primary bucket for user-related images
-    // - avatars folder: This is expected by your existing code
-    const buckets = [
-      // Only use the user-images bucket for profile images
-      { name: 'user-images', path: `avatars/${fileName}` }
+    console.log(`Uploading to ${bucket}/${filePath}`);
+    
+    // Upload the file
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
       
-      // IMPORTANT: Do NOT use tool-images for user avatars!
-      // This was causing the 400 errors as seen in the logs
-    ];
-    
-    // Try each bucket in sequence until one works
-    let uploadError = null;
-    let publicUrl = null;
-    
-    for (const bucket of buckets) {
-      console.log(`Attempting to upload to ${bucket.name} bucket with path: ${bucket.path}`);
-      
-      try {
-        // Upload the file to current bucket
-        const { data, error } = await supabase.storage
-          .from(bucket.name)
-          .upload(bucket.path, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
-          
-        if (error) {
-          console.error(`Error uploading to ${bucket.name} bucket:`, error);
-          uploadError = error;
-          continue; // Try next bucket
-        }
-        
-        // Get the public URL
-        const { data: { publicUrl: url } } = supabase.storage
-          .from(bucket.name)
-          .getPublicUrl(bucket.path);
-        
-        publicUrl = url;
-        console.log(`Successfully uploaded to ${bucket.name} bucket. URL:`, publicUrl);
-        
-        // Test URL accessibility
-        const isAccessible = await isUrlAccessible(publicUrl);
-        console.log(`URL accessibility test: ${isAccessible ? 'PASSED' : 'FAILED'}`);
-        
-        // Add a cache-busting parameter to the URL to prevent caching issues
-        if (publicUrl && publicUrl.includes('?')) {
-          publicUrl = `${publicUrl}&t=${Date.now()}`;
-        } else if (publicUrl) {
-          publicUrl = `${publicUrl}?t=${Date.now()}`;
-        }
-        break; // Stop trying buckets
-      } catch (error) {
-        console.error(`Unexpected error uploading to ${bucket.name} bucket:`, error);
-        uploadError = error;
-      }
+    if (uploadError) {
+      console.error('Error uploading profile image:', uploadError);
+      return { error: uploadError };
     }
     
-    // If we couldn't upload to any bucket
-    if (!publicUrl) {
-      console.error('Failed to upload to any storage bucket');
-      return { 
-        error: { 
-          message: 'Failed to upload image to any storage bucket. Please try again or contact support.', 
-          details: uploadError 
-        } 
-      };
-    }
+    // Create public URL directly (avoid getPublicUrl to ensure consistency)
+    const publicUrl = `https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/${bucket}/${filePath}`;
+    
+    console.log('Profile image uploaded successfully:', publicUrl);
     
     // Update user profile with new avatar URL
     try {
-      await updateUserWithNewAvatar(userId, publicUrl);
+      const { data, error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: publicUrl })
+        .eq('id', userId)
+        .select();
+        
+      if (updateError) {
+        console.error('Error updating user profile with avatar URL:', updateError);
+        return { 
+          data: { avatarUrl: publicUrl },
+          warning: 'Image uploaded but profile update failed'
+        };
+      }
+      
       return { data: { avatarUrl: publicUrl } };
     } catch (updateError) {
       console.error('Error updating user profile with avatar URL:', updateError);
-      // Still return success since the upload worked, but include a warning
       return { 
         data: { avatarUrl: publicUrl },
-        warning: 'Image uploaded successfully, but there was an issue updating your profile. Please refresh or try again.'
+        warning: 'Image uploaded successfully, but profile update failed'
       };
     }
   } catch (error) {
     console.error('Unexpected error in uploadProfileImage:', error);
-    return { error: { message: 'An unexpected error occurred', details: error } };
+    return { error };
   }
 };
 
-/**
- * Fix a URL to ensure it's properly formatted and has cache busting
- * This is especially useful for storage URLs that might have CORS issues
- * @param {string} url - The URL to fix
- * @returns {string} The fixed URL
- */
-function fixUrl(url) {
-  if (!url) return url;
-  
-  try {
-    // Parse the URL to handle query parameters properly
-    const urlObj = new URL(url);
-    
-    // Remove any existing 't' parameter to prevent duplicates
-    urlObj.searchParams.delete('t');
-    
-    // Add a fresh cache busting parameter
-    urlObj.searchParams.set('t', Date.now().toString());
-    
-    return urlObj.toString();
-  } catch (e) {
-    // If URL parsing fails, use the simple approach
-    console.warn('URL parsing failed, using simple cache busting');
-    const cacheBuster = Date.now();
-    return url.includes('?') 
-      ? `${url.split('?')[0]}?t=${cacheBuster}` 
-      : `${url}?t=${cacheBuster}`;
-  }
-}
-
-// Helper function to update user profile with new avatar URL
-async function updateUserWithNewAvatar(userId, publicUrl) {
-  try {
-    console.log(`Updating user ${userId} with new avatar URL: ${publicUrl}`);
-    
-    // Ensure the URL has a cache-busting parameter
-    const urlWithCacheBusting = fixUrl(publicUrl);
-    
-    // Update the user profile with the fixed URL
-    const { data, error: updateError } = await supabase
-      .from('users')
-      .update({ 
-        avatar_url: urlWithCacheBusting
-      })
-      .eq('id', userId)
-      .select('avatar_url');
-      
-    if (updateError) {
-      console.error('Error updating user profile with new avatar:', updateError);
-      throw updateError;
-    }
-    
-    console.log('Profile image updated in database. Result:', data);
-    
-    // Check if image URL appears to be accessible
-    if (typeof window !== 'undefined' && urlWithCacheBusting) {
-      console.log('Testing image URL accessibility...');
-      
-      // Create a test image to check URL validity
-      const testImg = new Image();
-      testImg.onload = () => console.log('Image URL test: SUCCESS! URL is accessible');
-      testImg.onerror = () => console.warn('Image URL test: FAILED! URL might be inaccessible');
-      testImg.src = urlWithCacheBusting;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error in updateUserWithNewAvatar:', error);
-    throw error;
-  }
-}
+// Import the standardized URL utility functions 
+import { fixStorageUrl } from './utils/imageUtils';
 
 /**
  * Remove profile image for a user
