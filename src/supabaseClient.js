@@ -346,21 +346,36 @@ export const signOut = async () => {
 
 /**
  * Update user profile data
- * @param {string} userId - User ID
  * @param {Object} profileData - User profile data to update
+ * @param {string} userId - Optional user ID (defaults to current user)
  * @returns {Object} Updated profile data or error
  */
-export const updateUserProfile = async (userId, profileData) => {
+export const updateUserProfile = async (profileData, userId = null) => {
   try {
+    // Get current user if userId not provided
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: 'User not found' } };
+      }
+      userId = user.id;
+    }
+    
     console.log(`Updating profile for user ${userId}`);
     
-    if (!userId) {
-      return { error: { message: 'User ID is required' } };
+    if (!profileData) {
+      return { error: { message: 'Profile data is required' } };
     }
+    
+    // Format data for update
+    const updateData = {
+      ...profileData,
+      updated_at: new Date().toISOString()
+    };
     
     const { data, error } = await supabase
       .from('users')
-      .update(profileData)
+      .update(updateData)
       .eq('id', userId)
       .select()
       .single();
@@ -373,6 +388,125 @@ export const updateUserProfile = async (userId, profileData) => {
     return { data };
   } catch (error) {
     console.error('Unexpected error in updateUserProfile:', error);
+    return { error };
+  }
+};
+
+/**
+ * Update user password
+ * @param {string} newPassword - New password
+ * @param {string} oldPassword - Optional old password for verification
+ * @returns {Object} Result of the operation
+ */
+export const updateUserPassword = async (newPassword, oldPassword = null) => {
+  try {
+    console.log('Updating user password');
+    
+    if (!newPassword) {
+      return { error: { message: 'New password is required' } };
+    }
+    
+    if (newPassword.length < 6) {
+      return { error: { message: 'Password must be at least 6 characters' } };
+    }
+    
+    // If old password provided, verify it first (for extra security)
+    if (oldPassword) {
+      // Get user email
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: 'User not found' } };
+      }
+      
+      // Try to sign in with the old password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: oldPassword
+      });
+      
+      if (signInError) {
+        console.error('Current password verification failed:', signInError);
+        return { error: { message: 'Current password is incorrect' } };
+      }
+    }
+    
+    // Update the password
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    if (error) {
+      console.error('Error updating password:', error);
+      return { error };
+    }
+    
+    console.log('Password updated successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in updateUserPassword:', error);
+    return { error };
+  }
+};
+
+/**
+ * Update user notification preferences
+ * @param {Object} preferences - Notification preferences
+ * @param {string} userId - Optional user ID (defaults to current user)
+ * @returns {Object} Result of the operation
+ */
+export const updateUserPreferences = async (preferences, userId = null) => {
+  try {
+    // Get current user if userId not provided
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: 'User not found' } };
+      }
+      userId = user.id;
+    }
+    
+    console.log(`Updating preferences for user ${userId}`);
+    
+    if (!preferences) {
+      return { error: { message: 'Preferences data is required' } };
+    }
+    
+    // Get current user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('notification_preferences')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error fetching user preferences:', profileError);
+      return { error: profileError };
+    }
+    
+    // Merge existing preferences with new ones
+    const updatedPreferences = {
+      ...(profile?.notification_preferences || {}),
+      ...preferences,
+    };
+    
+    // Update the preferences
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        notification_preferences: updatedPreferences,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+      
+    if (error) {
+      console.error('Error updating user preferences:', error);
+      return { error };
+    }
+    
+    console.log('User preferences updated successfully');
+    return { success: true, data: updatedPreferences };
+  } catch (error) {
+    console.error('Unexpected error in updateUserPreferences:', error);
     return { error };
   }
 };
@@ -1211,6 +1345,439 @@ export const fetchCartItems = async (userId) => {
     return { data };
   } catch (error) {
     console.error('Unexpected error in fetchCartItems:', error);
+    return { error };
+  }
+};
+
+//==============================================================================
+// USER PROFILE IMAGE FUNCTIONS
+//==============================================================================
+
+/**
+ * Upload a profile image for a user
+ * @param {File} file - Image file to upload
+ * @param {string} userId - Optional user ID (defaults to current user)
+ * @returns {Object} Result of the operation with avatar URL
+ */
+export const uploadProfileImage = async (file, userId = null) => {
+  try {
+    console.log('Uploading profile image');
+    
+    if (!file) {
+      return { error: { message: 'File is required' } };
+    }
+    
+    // Get current user if userId not provided
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: 'User not found' } };
+      }
+      userId = user.id;
+    }
+    
+    console.log(`Uploading profile image for user ${userId}`);
+    
+    // Check file type and size
+    if (!file.type.startsWith('image/')) {
+      return { error: { message: 'File must be an image' } };
+    }
+    
+    if (file.size > 2 * 1024 * 1024) { // 2MB
+      return { error: { message: 'File size must be less than 2MB' } };
+    }
+    
+    // Generate a unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+    
+    // Upload the file to storage
+    const { error: uploadError } = await supabase.storage
+      .from('profiles')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+      
+    if (uploadError) {
+      console.error('Error uploading profile image:', uploadError);
+      return { error: uploadError };
+    }
+    
+    // Get the public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('profiles')
+      .getPublicUrl(filePath);
+    
+    // Update the user's profile with the new avatar URL
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        avatar_url: publicUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+      
+    if (updateError) {
+      console.error('Error updating user profile with new avatar:', updateError);
+      return { error: updateError };
+    }
+    
+    console.log('Profile image uploaded successfully:', publicUrl);
+    return { data: { avatarUrl: publicUrl } };
+  } catch (error) {
+    console.error('Unexpected error in uploadProfileImage:', error);
+    return { error };
+  }
+};
+
+/**
+ * Remove profile image for a user
+ * @param {string} userId - Optional user ID (defaults to current user)
+ * @returns {Object} Result of the operation
+ */
+export const removeProfileImage = async (userId = null) => {
+  try {
+    console.log('Removing profile image');
+    
+    // Get current user if userId not provided
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: 'User not found' } };
+      }
+      userId = user.id;
+    }
+    
+    console.log(`Removing profile image for user ${userId}`);
+    
+    // Get the current avatar URL
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('avatar_url')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      return { error: profileError };
+    }
+    
+    // Update the user profile to remove avatar_url
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        avatar_url: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+      
+    if (updateError) {
+      console.error('Error updating user profile:', updateError);
+      return { error: updateError };
+    }
+    
+    // Try to delete the file from storage if it exists
+    if (profile && profile.avatar_url) {
+      try {
+        // Extract the path from the URL
+        const urlPath = new URL(profile.avatar_url).pathname;
+        const storagePath = urlPath.split('/').slice(-2).join('/');
+        
+        if (storagePath) {
+          await supabase.storage.from('profiles').remove([`avatars/${storagePath}`]);
+        }
+      } catch (removeError) {
+        console.warn('Could not remove old avatar file:', removeError);
+        // Don't fail the operation if storage removal fails
+      }
+    }
+    
+    console.log('Profile image removed successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in removeProfileImage:', error);
+    return { error };
+  }
+};
+
+//==============================================================================
+// OFFER MANAGEMENT FUNCTIONS
+//==============================================================================
+
+/**
+ * Fetch offers for a user
+ * @param {string} userId - Optional user ID (defaults to current user)
+ * @param {string} role - Role to filter by ('seller', 'buyer', or 'all')
+ * @param {string} status - Status to filter by ('pending', 'accepted', 'rejected', 'all')
+ * @returns {Object} Array of offers or error
+ */
+export const fetchUserOffers = async (userId = null, role = 'all', status = 'all') => {
+  try {
+    // Get current user if userId not provided
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: { message: 'User not found' } };
+      }
+      userId = user.id;
+    }
+    
+    console.log(`Fetching offers for user ${userId} as ${role}, status: ${status}`);
+    
+    // Build the query based on role
+    let query = supabase.from('offers').select(`
+      id,
+      created_at,
+      updated_at,
+      status,
+      amount,
+      counter_offer,
+      listing:tool_id (
+        id,
+        name,
+        images,
+        current_price,
+        seller_id
+      ),
+      buyer:buyer_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      ),
+      seller:seller_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `);
+    
+    // Apply role filter
+    if (role === 'seller') {
+      query = query.eq('seller_id', userId);
+    } else if (role === 'buyer') {
+      query = query.eq('buyer_id', userId);
+    } else {
+      // 'all' - either seller or buyer
+      query = query.or(`seller_id.eq.${userId},buyer_id.eq.${userId}`);
+    }
+    
+    // Apply status filter
+    if (status !== 'all') {
+      query = query.eq('status', status);
+    }
+    
+    // Sort by most recent
+    query = query.order('created_at', { ascending: false });
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching user offers:', error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchUserOffers:', error);
+    return { error };
+  }
+};
+
+/**
+ * Create a new offer
+ * @param {Object} offerData - Offer data
+ * @returns {Object} Created offer or error
+ */
+export const createOffer = async (offerData) => {
+  try {
+    if (!offerData.toolId || !offerData.amount) {
+      return { error: { message: 'Tool ID and amount are required' } };
+    }
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { error: { message: 'You must be logged in to make an offer' } };
+    }
+    
+    // Get tool info to verify it exists and get seller ID
+    const { data: tool, error: toolError } = await supabase
+      .from('tools')
+      .select('id, seller_id, name, current_price')
+      .eq('id', offerData.toolId)
+      .single();
+      
+    if (toolError) {
+      console.error('Error fetching tool:', toolError);
+      return { error: { message: 'Tool not found' } };
+    }
+    
+    // Cannot make offer on own listing
+    if (tool.seller_id === user.id) {
+      return { error: { message: 'Cannot make offer on your own listing' } };
+    }
+    
+    // Create the offer
+    const { data, error } = await supabase
+      .from('offers')
+      .insert({
+        tool_id: offerData.toolId,
+        buyer_id: user.id,
+        seller_id: tool.seller_id,
+        amount: offerData.amount,
+        status: 'pending',
+        message: offerData.message || '',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating offer:', error);
+      return { error };
+    }
+    
+    // Send notification to seller (via SendGrid email API)
+    try {
+      // Get seller email
+      const { data: seller } = await supabase
+        .from('users')
+        .select('email, username')
+        .eq('id', tool.seller_id)
+        .single();
+        
+      if (seller) {
+        // Send email notification (implementation would go here)
+        console.log(`Notification would be sent to ${seller.email} about new offer`);
+      }
+    } catch (notifError) {
+      console.error('Error sending offer notification:', notifError);
+      // Don't fail the offer creation if notification fails
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in createOffer:', error);
+    return { error };
+  }
+};
+
+/**
+ * Respond to an offer (accept, reject, or counter)
+ * @param {string} offerId - Offer ID
+ * @param {string} action - Action to take ('accept', 'reject', 'counter')
+ * @param {number} counterAmount - Counter offer amount (required if action is 'counter')
+ * @returns {Object} Result of the operation
+ */
+export const respondToOffer = async (offerId, action, counterAmount = null) => {
+  try {
+    if (!offerId || !action) {
+      return { error: { message: 'Offer ID and action are required' } };
+    }
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { error: { message: 'You must be logged in to respond to an offer' } };
+    }
+    
+    // Get the offer
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .select(`
+        id, 
+        status, 
+        seller_id, 
+        buyer_id, 
+        tool_id,
+        listing:tool_id (name)
+      `)
+      .eq('id', offerId)
+      .single();
+      
+    if (offerError) {
+      console.error('Error fetching offer:', offerError);
+      return { error: { message: 'Offer not found' } };
+    }
+    
+    // Verify user is the seller
+    if (offer.seller_id !== user.id) {
+      return { error: { message: 'Only the seller can respond to offers' } };
+    }
+    
+    // Verify offer is still pending
+    if (offer.status !== 'pending') {
+      return { error: { message: 'Cannot respond to an offer that is not pending' } };
+    }
+    
+    // Prepare update data based on action
+    let updateData = {};
+    
+    switch (action) {
+      case 'accept':
+        updateData = {
+          status: 'accepted',
+          updated_at: new Date().toISOString()
+        };
+        break;
+      case 'reject':
+        updateData = {
+          status: 'rejected',
+          updated_at: new Date().toISOString()
+        };
+        break;
+      case 'counter':
+        if (!counterAmount) {
+          return { error: { message: 'Counter offer amount is required' } };
+        }
+        updateData = {
+          status: 'countered',
+          counter_offer: counterAmount,
+          updated_at: new Date().toISOString()
+        };
+        break;
+      default:
+        return { error: { message: 'Invalid action' } };
+    }
+    
+    // Update the offer
+    const { data, error } = await supabase
+      .from('offers')
+      .update(updateData)
+      .eq('id', offerId)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error updating offer:', error);
+      return { error };
+    }
+    
+    // Send notification to buyer
+    try {
+      // Get buyer email
+      const { data: buyer } = await supabase
+        .from('users')
+        .select('email, username')
+        .eq('id', offer.buyer_id)
+        .single();
+        
+      if (buyer) {
+        // Send email notification (implementation would go here)
+        console.log(`Notification would be sent to ${buyer.email} about offer response`);
+      }
+    } catch (notifError) {
+      console.error('Error sending offer notification:', notifError);
+      // Don't fail the offer response if notification fails
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in respondToOffer:', error);
     return { error };
   }
 };
