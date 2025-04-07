@@ -61,12 +61,26 @@ router.post('/listing-published', async (req, res) => {
       return res.status(400).json({ error: 'Email and listing details are required' });
     }
     
+    // Validate the listingDetails structure
+    if (!listingDetails.title || !listingDetails.price || !listingDetails.id) {
+      console.log('Invalid listing details structure:', listingDetails);
+      return res.status(400).json({ error: 'Listing details must include title, price, and id' });
+    }
+    
+    console.log('Sending listing published email with details:', {
+      to: email,
+      listing_title: listingDetails.title,
+      listing_price: listingDetails.price,
+      listing_id: listingDetails.id
+    });
+    
     const result = await emailService.sendListingPublishedEmail(email, listingDetails);
     console.log('sendListingPublishedEmail result:', result);
     
     if (result.success) {
       return res.status(200).json({ message: 'Listing published email sent successfully' });
     } else {
+      console.error('SendGrid API error details:', result.error);
       return res.status(500).json({ error: 'Failed to send listing published email', details: result.error });
     }
   } catch (error) {
@@ -154,6 +168,66 @@ router.get('/test-connection', async (req, res) => {
   } catch (error) {
     console.error('Error in test endpoint:', error);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Route for sending offer update email
+router.post('/offer-update', async (req, res) => {
+  try {
+    const { email, offerDetails } = req.body;
+    
+    console.log('Received offer-update request:', {
+      email, 
+      offerDetails
+    });
+    
+    if (!email || !offerDetails) {
+      console.log('Missing required fields for offer-update email');
+      return res.status(400).json({ error: 'Email and offer details are required' });
+    }
+    
+    const result = await emailService.sendOfferUpdateEmail(email, offerDetails);
+    console.log('sendOfferUpdateEmail result:', result);
+    
+    if (result.success) {
+      return res.status(200).json({ message: 'Offer update email sent successfully' });
+    } else {
+      console.error('SendGrid API error details:', result.error);
+      return res.status(500).json({ error: 'Failed to send offer update email', details: result.error });
+    }
+  } catch (error) {
+    console.error('Error sending offer update email:', error);
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Route for sending message sent email
+router.post('/message-sent', async (req, res) => {
+  try {
+    const { email, messageDetails } = req.body;
+    
+    console.log('Received message-sent request:', {
+      email, 
+      messageDetails
+    });
+    
+    if (!email || !messageDetails) {
+      console.log('Missing required fields for message-sent email');
+      return res.status(400).json({ error: 'Email and message details are required' });
+    }
+    
+    const result = await emailService.sendMessageSentEmail(email, messageDetails);
+    console.log('sendMessageSentEmail result:', result);
+    
+    if (result.success) {
+      return res.status(200).json({ message: 'Message sent email sent successfully' });
+    } else {
+      console.error('SendGrid API error details:', result.error);
+      return res.status(500).json({ error: 'Failed to send message sent email', details: result.error });
+    }
+  } catch (error) {
+    console.error('Error sending message sent email:', error);
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 

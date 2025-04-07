@@ -49,13 +49,26 @@ export const signUp = async (email, password, userData) => {
       
     if (profileError) return { error: profileError };
     
-    // Import here to avoid circular dependencies
-    const emailService = require('./utils/emailService').default;
-    
-    // Send welcome email
+    // Send welcome email directly via API
     try {
-      await emailService.sendAccountCreationEmail(email, userData.fullName || userData.username);
-      console.log('Welcome email sent to:', email);
+      const response = await fetch('/api/email/account-creation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          firstName: userData.fullName || userData.username
+        }),
+      });
+      
+      // Log the result
+      if (response.ok) {
+        console.log('Welcome email sent to:', email);
+      } else {
+        const result = await response.json();
+        console.error('Error sending welcome email:', result.error);
+      }
     } catch (emailError) {
       console.error('Error sending welcome email:', emailError);
       // Don't return error, as the signup was successful
@@ -117,17 +130,28 @@ export const resetPassword = async (email) => {
     });
     
     if (!error) {
-      // Import the email service to avoid circular dependencies
-      const emailService = require('./utils/emailService').default;
-      
+      // Send custom password reset email directly
       try {
-        // Send custom password reset email in addition to Supabase's built-in email
-        // This allows for a more branded experience
-        await emailService.sendPasswordResetEmail(
-          email,
-          `${baseUrl}/reset-password?email=${encodeURIComponent(email)}`
-        );
-        console.log('Custom password reset email sent to:', email);
+        const resetLink = `${baseUrl}/reset-password?email=${encodeURIComponent(email)}`;
+        
+        const response = await fetch('/api/email/password-reset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email,
+            resetLink: resetLink
+          }),
+        });
+        
+        // Log the result
+        if (response.ok) {
+          console.log('Custom password reset email sent to:', email);
+        } else {
+          const result = await response.json();
+          console.error('Error sending custom password reset email:', result.error);
+        }
       } catch (emailError) {
         console.error('Error sending custom password reset email:', emailError);
         // Don't return error, as the Supabase reset email was sent successfully
@@ -318,21 +342,32 @@ export const createTool = async (toolData) => {
     .single();
   
   if (!error && data) {
-    // Import the email service to avoid circular dependencies
-    const emailService = require('./utils/emailService').default;
-    
-    // Send listing published confirmation email to seller
+    // Import email service using dynamic import to avoid circular dependencies
     try {
-      await emailService.sendListingPublishedEmail(
-        user.email,
-        {
-          title: data.name,
-          price: data.current_price,
-          image: data.images?.[0] || 'https://benchlot.com/images/placeholder-tool.jpg', // Default placeholder image
-          id: data.id
-        }
-      );
-      console.log('Listing published email sent to:', user.email);
+      // Use fetch directly to send email notification
+      const response = await fetch('/api/email/listing-published', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          listingDetails: {
+            title: data.name,
+            price: data.current_price,
+            image: data.images?.[0] || 'https://benchlot.com/images/placeholder-tool.jpg', // Default placeholder image
+            id: data.id
+          }
+        }),
+      });
+      
+      // Log the result
+      const result = await response.json();
+      if (response.ok) {
+        console.log('Listing published email sent to:', user.email);
+      } else {
+        console.error('Error sending listing published email:', result.error);
+      }
     } catch (emailError) {
       console.error('Error sending listing published email:', emailError);
       // Don't return error, as the listing creation was successful
@@ -929,9 +964,6 @@ export const createOffer = async (toolId, amount, message = '') => {
       .eq('id', messageData[0].id);
     
     // Send email notification to seller
-    // Import the email service to avoid circular dependencies
-    const emailService = require('./utils/emailService').default;
-    
     try {
       // Get seller details
       const { data: seller } = await supabase
@@ -944,18 +976,31 @@ export const createOffer = async (toolId, amount, message = '') => {
       const buyerName = user.profile?.full_name || user.profile?.username || user.email;
       
       if (seller) {
-        // Send offer received email to seller
-        await emailService.sendOfferReceivedEmail(
-          seller.email,
-          {
-            buyerName: buyerName,
-            listingTitle: tool.name,
-            offerAmount: amount,
-            listingPrice: tool.current_price,
-            offerId: offerData[0].id
-          }
-        );
-        console.log('Offer received email sent to:', seller.email);
+        // Send offer received email directly via API
+        const response = await fetch('/api/email/offer-received', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: seller.email,
+            offerDetails: {
+              buyerName: buyerName,
+              listingTitle: tool.name,
+              offerAmount: amount,
+              listingPrice: tool.current_price,
+              offerId: offerData[0].id
+            }
+          }),
+        });
+        
+        // Log the result
+        if (response.ok) {
+          console.log('Offer received email sent to:', seller.email);
+        } else {
+          const result = await response.json();
+          console.error('Error sending offer notification email:', result.error);
+        }
       }
     } catch (emailError) {
       console.error('Error sending offer notification email:', emailError);
@@ -1101,9 +1146,6 @@ export const respondToOffer = async (offerId, action, counterAmount = null) => {
     if (messageError) throw messageError;
     
     // Send email notification to buyer
-    // Import the email service to avoid circular dependencies
-    const emailService = require('./utils/emailService').default;
-    
     try {
       // Get buyer details
       const { data: buyer } = await supabase
@@ -1116,19 +1158,32 @@ export const respondToOffer = async (offerId, action, counterAmount = null) => {
       const sellerName = user.profile?.full_name || user.profile?.username || user.email;
       
       if (buyer) {
-        // Send offer update email to buyer
-        await emailService.sendOfferUpdateEmail(
-          buyer.email,
-          {
-            sellerName: sellerName,
-            listingTitle: offer.tool.name,
-            status: action === 'counter' ? 'countered' : action,
-            offerAmount: offer.amount,
-            counterOffer: action === 'counter' ? counterAmount : null,
-            listingId: offer.tool_id
-          }
-        );
-        console.log('Offer update email sent to:', buyer.email);
+        // Send offer update email directly via API
+        const response = await fetch('/api/email/offer-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: buyer.email,
+            offerDetails: {
+              sellerName: sellerName,
+              listingTitle: offer.tool.name,
+              status: action === 'counter' ? 'countered' : action,
+              offerAmount: offer.amount,
+              counterOffer: action === 'counter' ? counterAmount : null,
+              listingId: offer.tool_id
+            }
+          }),
+        });
+        
+        // Log the result
+        if (response.ok) {
+          console.log('Offer update email sent to:', buyer.email);
+        } else {
+          const result = await response.json();
+          console.error('Error sending offer update email:', result.error);
+        }
       }
     } catch (emailError) {
       console.error('Error sending offer update email:', emailError);

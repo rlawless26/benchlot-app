@@ -24,9 +24,25 @@ const TEMPLATE_IDS = {
 
 // Base email sender function
 const sendEmail = async (to, templateId, dynamicTemplateData, from = 'notifications@benchlot.com') => {
-  console.log(`Attempting to send email to ${to} using template ${templateId}`);
+  // Add timestamp for debugging purposes
+  console.log(`[${new Date().toISOString()}] Attempting to send email to ${to} using template ${templateId}`);
   console.log('Template data:', JSON.stringify(dynamicTemplateData));
-  console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+  console.log('Environment variables:');
+  console.log('- FRONTEND_URL:', process.env.FRONTEND_URL);
+  console.log('- NODE_ENV:', process.env.NODE_ENV);
+  console.log('- SENDGRID_API_KEY set:', !!process.env.SENDGRID_API_KEY);
+  
+  // Validate template ID exists
+  if (!templateId) {
+    console.error('ERROR: Template ID is missing or undefined');
+    return { success: false, error: { message: 'Missing template ID' } };
+  }
+  
+  // Validate recipient email
+  if (!to || typeof to !== 'string' || !to.includes('@')) {
+    console.error('ERROR: Invalid recipient email address:', to);
+    return { success: false, error: { message: 'Invalid recipient email' } };
+  }
   
   const msg = {
     to,
@@ -36,14 +52,50 @@ const sendEmail = async (to, templateId, dynamicTemplateData, from = 'notificati
   };
   
   try {
+    console.log('Sending email with payload:', {
+      to: msg.to,
+      from: msg.from,
+      templateId: msg.templateId,
+      // Don't log full template data as it might contain sensitive info
+      dataKeys: Object.keys(msg.dynamicTemplateData)
+    });
+    
     const response = await sgMail.send(msg);
-    console.log(`Email sent successfully to ${to} using template ${templateId}`);
+    console.log(`✅ Email sent successfully to ${to} using template ${templateId}`);
     console.log('SendGrid response:', response[0].statusCode);
     return { success: true };
   } catch (error) {
-    console.error('SendGrid email error:', error.toString());
-    console.error('Error details:', error.response ? JSON.stringify(error.response.body) : 'No response details');
-    return { success: false, error };
+    console.error(`❌ SendGrid email error when sending to ${to}:`, error.toString());
+    
+    // More detailed error logging
+    if (error.response) {
+      console.error('SendGrid API response details:');
+      console.error('- Status code:', error.response.statusCode);
+      console.error('- Body:', JSON.stringify(error.response.body));
+      console.error('- Headers:', JSON.stringify(error.response.headers));
+    }
+    
+    // Check for common issues
+    if (!process.env.SENDGRID_API_KEY) {
+      console.error('CRITICAL ERROR: SENDGRID_API_KEY is not set in environment');
+    }
+    
+    if (error.message && error.message.includes('unauthorized')) {
+      console.error('AUTHORIZATION ERROR: SendGrid API key may be invalid or missing permissions');
+    }
+    
+    if (error.message && error.message.includes('template')) {
+      console.error(`TEMPLATE ERROR: Template ID ${templateId} may be invalid or not found`);
+    }
+    
+    return { 
+      success: false, 
+      error: {
+        message: error.message,
+        statusCode: error.response?.statusCode,
+        details: error.response?.body
+      } 
+    };
   }
 };
 
@@ -83,15 +135,30 @@ exports.sendAccountCreationEmail = (to, firstName) => {
 
 // Seller Emails
 exports.sendListingPublishedEmail = (to, listingDetails) => {
-  // Calculate discount percentage if both prices are provided
+  console.log('sendListingPublishedEmail called with:', {
+    to,
+    listingDetails
+  });
+
+  // Add fallback image if not provided
+  const imageUrl = listingDetails.image || 'https://benchlot.com/images/placeholder-tool.jpg';
+  
+  // Create the listing URL
+  const listingUrl = `${process.env.FRONTEND_URL}/tool/${listingDetails.id}`;
+  
+  console.log('Using template ID:', TEMPLATE_IDS.LISTING_PUBLISHED);
+  console.log('Frontend URL from env:', process.env.FRONTEND_URL);
+  console.log('Complete listing URL:', listingUrl);
+  
+  // Send the email with template data
   return sendEmail(
     to, 
     TEMPLATE_IDS.LISTING_PUBLISHED, 
     { 
       listing_title: listingDetails.title,
       listing_price: listingDetails.price,
-      listing_image: listingDetails.image,
-      listing_url: `${process.env.FRONTEND_URL}/tool/${listingDetails.id}`
+      listing_image: imageUrl,
+      listing_url: listingUrl
     }
   );
 };
