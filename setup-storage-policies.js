@@ -59,68 +59,27 @@ async function setupStoragePolicies() {
         continue;
       }
       
-      // 2. Set up anonymous read policy (for public access)
+      // 2. Update the bucket to be public
       try {
         console.log(`Setting up anonymous read policy for ${bucketId}...`);
-        const { error: readPolicyError } = await supabaseAdmin.storage.from(bucketId)
-          .createPolicy('Public Read Access', {
-            name: 'Public Read Access',
-            definition: {
-              role: 'anon',
-              action: 'SELECT'
-            }
-          });
+        const { error: updateError } = await supabaseAdmin.storage.updateBucket(bucketId, {
+          public: true // This is the key setting for public read access
+        });
           
-        if (readPolicyError) {
-          console.error(`Error creating read policy for ${bucketId}:`, readPolicyError);
+        if (updateError) {
+          console.error(`Error updating bucket to public for ${bucketId}:`, updateError);
         } else {
-          console.log(`Anonymous read policy created for ${bucketId}`);
+          console.log(`Set bucket ${bucketId} to public successfully`);
         }
       } catch (error) {
-        console.error(`Error setting up read policy for ${bucketId}:`, error);
+        console.error(`Error setting up public access for ${bucketId}:`, error);
       }
       
-      // 3. Set up authenticated write policy
-      try {
-        console.log(`Setting up authenticated insert policy for ${bucketId}...`);
-        const { error: insertPolicyError } = await supabaseAdmin.storage.from(bucketId)
-          .createPolicy('Auth Insert Policy', {
-            name: 'Auth Insert Policy',
-            definition: {
-              role: 'authenticated',
-              action: 'INSERT' 
-            }
-          });
-          
-        if (insertPolicyError) {
-          console.error(`Error creating insert policy for ${bucketId}:`, insertPolicyError);
-        } else {
-          console.log(`Authenticated insert policy created for ${bucketId}`);
-        }
-      } catch (error) {
-        console.error(`Error setting up insert policy for ${bucketId}:`, error);
-      }
-      
-      // 4. Set up authenticated update policy
-      try {
-        console.log(`Setting up authenticated update policy for ${bucketId}...`);
-        const { error: updatePolicyError } = await supabaseAdmin.storage.from(bucketId)
-          .createPolicy('Auth Update Policy', {
-            name: 'Auth Update Policy',
-            definition: {
-              role: 'authenticated',
-              action: 'UPDATE'
-            }
-          });
-          
-        if (updatePolicyError) {
-          console.error(`Error creating update policy for ${bucketId}:`, updatePolicyError);
-        } else {
-          console.log(`Authenticated update policy created for ${bucketId}`);
-        }
-      } catch (error) {
-        console.error(`Error setting up update policy for ${bucketId}:`, error);
-      }
+      // Note: The newer Supabase JavaScript client doesn't support direct policy creation
+      // through the API. Instead, we make the bucket public which handles anonymous read access.
+      // For more granular policies, you'll need to use the Supabase dashboard or REST API.
+      console.log(`Note: Please configure detailed policies for ${bucketId} in the Supabase dashboard`);
+      console.log(`Follow instructions in STORAGE-SETUP.md for manual policy configuration`);
       
       // 5. Create avatars folder if it doesn't exist (for user-images)
       if (bucketId === 'user-images') {

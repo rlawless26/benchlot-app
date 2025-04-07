@@ -15,13 +15,32 @@ const FixedProfileImage = ({ url, size = 24, userId, fallback }) => {
   // If we have the URL, try to fix it on mount
   useEffect(() => {
     if (url) {
-      // First attempt: Use cache-busting query param
-      const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-      const urlWithCacheBuster = url.includes('?') 
-        ? `${url}&cb=${cacheBuster}` 
-        : `${url}?cb=${cacheBuster}`;
-      
-      setDisplayUrl(urlWithCacheBuster);
+      try {
+        // Properly handle URL parameters to avoid duplicates
+        const urlObj = new URL(url);
+        
+        // Remove any existing cache buster parameters
+        urlObj.searchParams.delete('t');
+        urlObj.searchParams.delete('cb');
+        
+        // Add a fresh cache buster with unique value
+        const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+        urlObj.searchParams.set('cb', cacheBuster);
+        
+        setDisplayUrl(urlObj.toString());
+        console.log(`Fixed image URL: ${urlObj.toString()}`);
+      } catch (e) {
+        // Fallback for URL parsing errors
+        console.warn('URL parsing failed in FixedProfileImage:', e);
+        
+        // Simple approach for malformed URLs
+        const cacheBuster = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+        const simpleFixedUrl = url.includes('?') 
+          ? `${url.split('?')[0]}?cb=${cacheBuster}` 
+          : `${url}?cb=${cacheBuster}`;
+        
+        setDisplayUrl(simpleFixedUrl);
+      }
     }
   }, [url]);
   
@@ -46,16 +65,39 @@ const FixedProfileImage = ({ url, size = 24, userId, fallback }) => {
           fixedUrl = url.replace('user-images', 'tool-images');
         }
         
-        // Add cache buster
-        const cacheBuster = `${Date.now()}-retry1`;
-        fixedUrl = fixedUrl.includes('?') 
-          ? `${fixedUrl}&cb=${cacheBuster}` 
-          : `${fixedUrl}?cb=${cacheBuster}`;
+        try {
+          // Properly handle URL parameters
+          const urlObj = new URL(fixedUrl);
+          
+          // Clear all existing query parameters to simplify
+          Array.from(urlObj.searchParams.keys()).forEach(key => {
+            urlObj.searchParams.delete(key);
+          });
+          
+          // Add a simple cache buster
+          urlObj.searchParams.set('cb', Date.now().toString());
+          
+          fixedUrl = urlObj.toString();
+        } catch (e) {
+          // Just use a simplified URL without query params
+          fixedUrl = fixedUrl.split('?')[0] + '?cb=' + Date.now();
+        }
         
         console.log("Retrying with fixed URL:", fixedUrl);
         setDisplayUrl(fixedUrl);
+        
+      } else if (retryCount === 1) {
+        // Try completely stripping all query parameters
+        try {
+          let strippedUrl = url.split('?')[0];
+          console.log("Retrying with stripped URL (no params):", strippedUrl);
+          setDisplayUrl(strippedUrl);
+        } catch (e) {
+          // Last resort if that fails too
+          setUseOriginal(false);
+        }
       } else {
-        // Last resort: try a completely different approach
+        // Final fallback: use generated avatar
         setUseOriginal(false);
       }
     } else {

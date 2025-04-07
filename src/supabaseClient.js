@@ -1630,13 +1630,25 @@ export const uploadProfileImage = async (file, userId = null) => {
 function fixUrl(url) {
   if (!url) return url;
   
-  // Add cache busting parameter
-  const cacheBuster = Date.now();
-  const urlWithCacheBusting = url.includes('?') 
-    ? `${url}&t=${cacheBuster}` 
-    : `${url}?t=${cacheBuster}`;
-  
-  return urlWithCacheBusting;
+  try {
+    // Parse the URL to handle query parameters properly
+    const urlObj = new URL(url);
+    
+    // Remove any existing 't' parameter to prevent duplicates
+    urlObj.searchParams.delete('t');
+    
+    // Add a fresh cache busting parameter
+    urlObj.searchParams.set('t', Date.now().toString());
+    
+    return urlObj.toString();
+  } catch (e) {
+    // If URL parsing fails, use the simple approach
+    console.warn('URL parsing failed, using simple cache busting');
+    const cacheBuster = Date.now();
+    return url.includes('?') 
+      ? `${url.split('?')[0]}?t=${cacheBuster}` 
+      : `${url}?t=${cacheBuster}`;
+  }
 }
 
 // Helper function to update user profile with new avatar URL

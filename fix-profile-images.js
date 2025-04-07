@@ -133,10 +133,31 @@ function checkIfUrlNeedsFix(url) {
     const bucketPart = pathParts.find(p => p === SOURCE_BUCKET);
     const folderPart = pathParts.find(p => p === SOURCE_FOLDER);
     
-    // URL is correct if it contains both the right bucket and folder
-    return !(bucketPart && folderPart);
+    // Check for duplicate query parameters
+    const params = urlObj.searchParams;
+    const duplicateParams = new Set();
+    let hasDuplicates = false;
+    
+    // Check each parameter for duplicates
+    params.forEach((value, key) => {
+      if (duplicateParams.has(key)) {
+        hasDuplicates = true;
+      }
+      duplicateParams.add(key);
+    });
+    
+    // Check for duplicate 't' parameters specifically
+    const tValues = params.getAll('t');
+    if (tValues.length > 1) {
+      hasDuplicates = true;
+      console.log(`Found duplicate 't' parameters: ${tValues.join(', ')}`);
+    }
+    
+    // URL needs fixing if it has duplicate parameters OR is missing correct bucket/folder
+    return hasDuplicates || !(bucketPart && folderPart);
   } catch (error) {
     // Invalid URL - needs fixing
+    console.error('Error parsing URL:', error);
     return true;
   }
 }
