@@ -1045,6 +1045,41 @@ export const fetchWishlistItems = async (userId) => {
 };
 
 /**
+ * Fetch the current user's wishlist items
+ * @returns {Object} Array of wishlist items or error
+ */
+export const fetchWishlist = async () => {
+  try {
+    console.log('Fetching wishlist for current user');
+    
+    // Get current user
+    const { data: userData } = await getCurrentUser();
+    if (!userData) {
+      return { error: { message: 'User is not logged in' } };
+    }
+    
+    // Use the existing fetchWishlistItems function
+    const { data, error } = await fetchWishlistItems(userData.id);
+    
+    if (error) {
+      return { error };
+    }
+    
+    // Transform the data to match the expected format in Wishlist.jsx
+    const transformedData = data.map(item => ({
+      id: item.tool.id,
+      ...item.tool,
+      added_at: item.added_at
+    }));
+    
+    return { data: transformedData };
+  } catch (error) {
+    console.error('Unexpected error in fetchWishlist:', error);
+    return { error };
+  }
+};
+
+/**
  * Check if tool is in user's wishlist
  * @param {string} userId - User ID
  * @param {string} toolId - Tool ID
@@ -1076,25 +1111,65 @@ export const isInWishlist = async (userId, toolId) => {
   }
 };
 
+/**
+ * Check if a tool is in the current user's wishlist
+ * @param {string} toolId - Tool ID to check
+ * @returns {Object} Boolean result or error
+ */
+export const isToolInWishlist = async (toolId) => {
+  try {
+    console.log(`Checking if tool ${toolId} is in the current user's wishlist`);
+    
+    if (!toolId) {
+      return { data: false };
+    }
+    
+    // Get current user
+    const { data: userData } = await getCurrentUser();
+    if (!userData) {
+      return { data: false };
+    }
+    
+    // Use the existing isInWishlist function with the current user ID
+    return await isInWishlist(userData.id, toolId);
+  } catch (error) {
+    console.error('Unexpected error in isToolInWishlist:', error);
+    return { error };
+  }
+};
+
 //==============================================================================
 // MESSAGE FUNCTIONS
 //==============================================================================
 
 /**
  * Send a message
- * @param {Object} messageData - Message data
+ * @param {string} recipientId - Recipient user ID
+ * @param {string} content - Message content
+ * @param {string} toolId - Optional tool ID related to the message
+ * @param {string} messageType - Optional message type (default: 'text')
  * @returns {Object} Created message or error
  */
-export const sendMessage = async (messageData) => {
+export const sendMessage = async (recipientId, content, toolId = null, messageType = 'text') => {
   try {
-    console.log('Sending message:', messageData);
+    console.log(`Sending message to ${recipientId}${toolId ? ' about tool ' + toolId : ''}`);
     
-    if (!messageData.sender_id || !messageData.recipient_id || !messageData.content) {
-      return { error: { message: 'Sender ID, recipient ID, and content are required' } };
+    if (!recipientId || !content) {
+      return { error: { message: 'Recipient ID and content are required' } };
+    }
+    
+    // Get current user
+    const { data: userData } = await getCurrentUser();
+    if (!userData) {
+      return { error: { message: 'User is not logged in' } };
     }
     
     const message = {
-      ...messageData,
+      sender_id: userData.id,
+      recipient_id: recipientId,
+      content,
+      tool_id: toolId,
+      message_type: messageType,
       created_at: new Date().toISOString(),
       is_read: false
     };
@@ -1517,11 +1592,11 @@ export const fetchUserOffers = async (userId = null, role = 'all', status = 'all
   try {
     // Get current user if userId not provided
     if (!userId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: userData } = await getCurrentUser();
+      if (!userData) {
         return { error: { message: 'User not found' } };
       }
-      userId = user.id;
+      userId = userData.id;
     }
     
     console.log(`Fetching offers for user ${userId} as ${role}, status: ${status}`);
@@ -1778,6 +1853,51 @@ export const respondToOffer = async (offerId, action, counterAmount = null) => {
     return { data };
   } catch (error) {
     console.error('Unexpected error in respondToOffer:', error);
+    return { error };
+  }
+};
+
+/**
+ * Fetch similar tools to the specified tool
+ * @param {string} toolId - Current tool ID to exclude
+ * @param {string} category - Category to match
+ * @param {number} limit - Number of tools to fetch
+ * @returns {Object} Array of similar tools or error
+ */
+export const fetchSimilarTools = async (toolId, category, limit = 3) => {
+  try {
+    console.log(`Fetching similar tools to ${toolId} in category: ${category}, limit: ${limit}`);
+    
+    // Use fetchTools but filter by category and exclude current tool
+    const { data, error } = await supabase
+      .from('tools')
+      .select(`
+        id,
+        name,
+        description,
+        images,
+        current_price,
+        original_price,
+        condition,
+        category,
+        subcategory,
+        brand,
+        is_verified,
+        seller:seller_id(id, username, full_name, avatar_url, location, is_verified)
+      `)
+      .eq('category', category)
+      .neq('id', toolId)
+      .eq('is_sold', false)
+      .limit(limit);
+    
+    if (error) {
+      console.error('Error fetching similar tools:', error);
+      return { error };
+    }
+    
+    return { data };
+  } catch (error) {
+    console.error('Unexpected error in fetchSimilarTools:', error);
     return { error };
   }
 };
