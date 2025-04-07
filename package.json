@@ -32,14 +32,13 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && node scripts/inject-env.js",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server/index.js",
     "clean-server": "node server/clean-server.js",
     "dev": "concurrently \"npm run start\" \"npm run server\"",
-    "dev-clean": "concurrently \"npm run start\" \"npm run clean-server\"",
-    "vercel-build": "npm run build && node vercel-build.js"
+    "dev-clean": "concurrently \"npm run start\" \"npm run clean-server\""
   },
   "eslintConfig": {
     "extends": [
