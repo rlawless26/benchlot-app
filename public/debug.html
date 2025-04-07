@@ -39,6 +39,22 @@
     button:hover {
       background-color: #3182ce;
     }
+    .email-test-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .email-test-buttons button {
+      background-color: #38a169;
+    }
+    .email-test-buttons button:hover {
+      background-color: #2f855a;
+    }
+    input[type="email"] {
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+    }
     .result-container {
       margin-top: 10px;
     }
@@ -67,6 +83,25 @@
   <h2>Marketplace Data Test</h2>
   <button id="test-marketplace">Test Marketplace Data</button>
   <div id="marketplace-result" class="result-container"></div>
+  
+  <h2>Email System Tests</h2>
+  <div>
+    <p>Send test transactional emails to verify the email system is working correctly.</p>
+    <div style="margin-bottom: 10px;">
+      <label for="test-email-recipient">Recipient Email:</label>
+      <input type="email" id="test-email-recipient" value="rob@benchlot.com" style="padding: 6px; width: 250px;">
+      <span style="font-size: 0.8em; color: #666; margin-left: 10px;">(Must end with benchlot.com for security)</span>
+    </div>
+    <div class="email-test-buttons">
+      <button id="test-email-welcome">Test Welcome Email</button>
+      <button id="test-email-listing">Test Listing Published Email</button>
+      <button id="test-email-reset">Test Password Reset Email</button>
+      <button id="test-email-message">Test Message Received Email</button>
+      <button id="test-email-offer">Test Offer Received Email</button>
+      <button id="test-email-basic">Test Basic Email</button>
+    </div>
+  </div>
+  <div id="email-test-result" class="result-container"></div>
   
   <script>
     // Function to gather environment variables from all possible sources
@@ -329,6 +364,115 @@
       });
     });
 
+    // Email testing functions
+    function sendTestEmail(emailType, testData = {}) {
+      const resultElement = document.getElementById('email-test-result');
+      const recipientEmail = document.getElementById('test-email-recipient').value;
+      
+      if (!recipientEmail || !recipientEmail.includes('@')) {
+        resultElement.innerHTML = `<p class="status error">❌ Please enter a valid email address</p>`;
+        return;
+      }
+      
+      // Validate email is a benchlot.com address or has +test@ for security
+      if (!recipientEmail.endsWith('benchlot.com') && !recipientEmail.includes('+test@')) {
+        resultElement.innerHTML = `<p class="status error">❌ For security, test emails can only be sent to benchlot.com addresses or addresses with +test@</p>`;
+        return;
+      }
+      
+      resultElement.innerHTML = `<p>Sending test ${emailType} email to ${recipientEmail}...</p>`;
+      
+      // Get API URL from environment or use current origin
+      const apiUrl = window.REACT_APP_API_URL || window.location.origin;
+      
+      // Send the request to the test-emails API
+      fetch(`${apiUrl}/api/test-emails`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailType,
+          recipientEmail,
+          testData
+        })
+      })
+      .then(response => {
+        if (!response.ok) throw new Error(`Status: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        resultElement.innerHTML = `
+          <p class="status success">✅ Test email sent successfully!</p>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+          <p>Check your inbox at <strong>${recipientEmail}</strong> for the test email.</p>
+        `;
+      })
+      .catch(error => {
+        console.error('Error sending test email:', error);
+        
+        // Try to parse error response
+        let errorMessage = error.message;
+        if (error.response) {
+          try {
+            const errorData = error.response.json();
+            errorMessage = errorData.message || errorData.error || error.message;
+          } catch (e) {
+            // Ignore parsing error
+          }
+        }
+        
+        resultElement.innerHTML = `
+          <p class="status error">❌ Failed to send test email: ${errorMessage}</p>
+          <p>Please check the console for more details.</p>
+        `;
+      });
+    }
+    
+    // Set up email test buttons
+    document.getElementById('test-email-welcome').addEventListener('click', function() {
+      sendTestEmail('welcome', {
+        firstName: 'New Benchlot User'
+      });
+    });
+    
+    document.getElementById('test-email-listing').addEventListener('click', function() {
+      sendTestEmail('listing-published', {
+        title: 'DeWalt Power Drill (Test)',
+        price: 129.99,
+        image: 'https://benchlot.com/images/placeholder-tool.jpg',
+        id: 'test-' + Date.now()
+      });
+    });
+    
+    document.getElementById('test-email-reset').addEventListener('click', function() {
+      sendTestEmail('password-reset', {
+        resetLink: 'https://benchlot.com/reset-password?token=test-token-' + Date.now()
+      });
+    });
+    
+    document.getElementById('test-email-message').addEventListener('click', function() {
+      sendTestEmail('message-received', {
+        senderName: 'Test User',
+        messageText: 'Hello! This is a test message to verify the message notification system is working correctly.',
+        senderId: 'test-user-' + Date.now()
+      });
+    });
+    
+    document.getElementById('test-email-offer').addEventListener('click', function() {
+      sendTestEmail('offer-received', {
+        buyerName: 'Test Buyer',
+        listingTitle: 'Vintage Hand Plane (Test)',
+        offerAmount: 75.00,
+        listingPrice: 100.00,
+        offerId: 'test-offer-' + Date.now()
+      });
+    });
+    
+    document.getElementById('test-email-basic').addEventListener('click', function() {
+      sendTestEmail('basic-test');
+    });
+    
     // Initialize
     showEnvironmentInfo();
   </script>
