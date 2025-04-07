@@ -23,16 +23,26 @@ app.use((req, res, next) => {
 // Note: Previously had complex cookie management middleware here.
 // Now handled in clean-server.js with a more straightforward approach.
 
-// CORS middleware
+// Improved CORS middleware
 app.use((req, res, next) => {
-  // Simplified CORS setup
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', '*'); // Allow all headers
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  const origin = req.headers.origin || '*';
   
-  // Handle OPTIONS requests immediately
+  // Configure CORS headers - more explicit for better debugging
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  // Log CORS requests in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`CORS: ${req.method} ${req.path} from ${origin}`);
+  }
+  
+  // Handle OPTIONS requests immediately - critical for CORS preflight
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    console.log(`Responding to OPTIONS request from ${origin}`);
+    return res.status(204).end();
   }
   
   next();
