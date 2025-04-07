@@ -367,10 +367,9 @@ export const updateUserProfile = async (profileData, userId = null) => {
       return { error: { message: 'Profile data is required' } };
     }
     
-    // Format data for update
+    // Format data for update - don't include updated_at as it doesn't exist in schema
     const updateData = {
-      ...profileData,
-      updated_at: new Date().toISOString()
+      ...profileData
     };
     
     const { data, error } = await supabase
@@ -489,12 +488,11 @@ export const updateUserPreferences = async (preferences, userId = null) => {
       ...preferences,
     };
     
-    // Update the preferences
+    // Update the preferences - don't include updated_at as it doesn't exist in schema
     const { error } = await supabase
       .from('users')
       .update({ 
-        notification_preferences: updatedPreferences,
-        updated_at: new Date().toISOString()
+        notification_preferences: updatedPreferences
       })
       .eq('id', userId);
       
@@ -1485,12 +1483,11 @@ export const uploadProfileImage = async (file, userId = null) => {
       .from('profiles')
       .getPublicUrl(filePath);
     
-    // Update the user's profile with the new avatar URL
+    // Update the user's profile with the new avatar URL - don't include updated_at as it doesn't exist in schema
     const { error: updateError } = await supabase
       .from('users')
       .update({ 
-        avatar_url: publicUrl,
-        updated_at: new Date().toISOString()
+        avatar_url: publicUrl
       })
       .eq('id', userId);
       
@@ -1539,12 +1536,11 @@ export const removeProfileImage = async (userId = null) => {
       return { error: profileError };
     }
     
-    // Update the user profile to remove avatar_url
+    // Update the user profile to remove avatar_url - don't include updated_at as it doesn't exist in schema
     const { error: updateError } = await supabase
       .from('users')
       .update({ 
-        avatar_url: null,
-        updated_at: new Date().toISOString()
+        avatar_url: null
       })
       .eq('id', userId);
       
