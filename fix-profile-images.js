@@ -133,6 +133,13 @@ function checkIfUrlNeedsFix(url) {
     const bucketPart = pathParts.find(p => p === SOURCE_BUCKET);
     const folderPart = pathParts.find(p => p === SOURCE_FOLDER);
     
+    // Check if the URL is using the WRONG bucket (tool-images)
+    const wrongBucket = pathParts.find(p => p === 'tool-images');
+    if (wrongBucket) {
+      console.log(`Found incorrect bucket: tool-images in URL: ${url}`);
+      return true;
+    }
+    
     // Check for duplicate query parameters
     const params = urlObj.searchParams;
     const duplicateParams = new Set();
@@ -153,8 +160,11 @@ function checkIfUrlNeedsFix(url) {
       console.log(`Found duplicate 't' parameters: ${tValues.join(', ')}`);
     }
     
-    // URL needs fixing if it has duplicate parameters OR is missing correct bucket/folder
-    return hasDuplicates || !(bucketPart && folderPart);
+    // URL needs fixing if:
+    // 1. It has duplicate parameters
+    // 2. It's using the wrong bucket
+    // 3. It's missing the correct bucket/folder
+    return hasDuplicates || wrongBucket || !(bucketPart && folderPart);
   } catch (error) {
     // Invalid URL - needs fixing
     console.error('Error parsing URL:', error);

@@ -57,13 +57,13 @@ const FixedProfileImage = ({ url, size = 24, userId, fallback }) => {
         // Try fixing the URL structure - look for user-images vs tool-images
         let fixedUrl = url;
         
+        // ONLY use user-images bucket for profile images
         if (url.includes('tool-images')) {
-          // Try user-images instead
+          // Always replace tool-images with user-images (this is the correct bucket)
           fixedUrl = url.replace('tool-images', 'user-images');
-        } else if (url.includes('user-images')) {
-          // Try tool-images instead
-          fixedUrl = url.replace('user-images', 'tool-images');
+          console.log('Corrected bucket from tool-images to user-images:', fixedUrl);
         }
+        // NEVER try tool-images bucket for profile images - this causes 400 errors
         
         try {
           // Properly handle URL parameters

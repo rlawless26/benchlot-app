@@ -1538,11 +1538,11 @@ export const uploadProfileImage = async (file, userId = null) => {
     // - user-images bucket: This is the primary bucket for user-related images
     // - avatars folder: This is expected by your existing code
     const buckets = [
-      // Most likely to work based on your existing setup 
-      { name: 'user-images', path: `avatars/${fileName}` },
+      // Only use the user-images bucket for profile images
+      { name: 'user-images', path: `avatars/${fileName}` }
       
-      // Alternative buckets (less likely to work unless set up)
-      { name: 'tool-images', path: `avatars/${fileName}` }
+      // IMPORTANT: Do NOT use tool-images for user avatars!
+      // This was causing the 400 errors as seen in the logs
     ];
     
     // Try each bucket in sequence until one works
