@@ -38,7 +38,8 @@
     "server": "node server/index.js",
     "clean-server": "node server/clean-server.js",
     "dev": "concurrently \"npm run start\" \"npm run server\"",
-    "dev-clean": "concurrently \"npm run start\" \"npm run clean-server\""
+    "dev-clean": "concurrently \"npm run start\" \"npm run clean-server\"",
+    "vercel-build": "node vercel-build.js"
   },
   "eslintConfig": {
     "extends": [
