@@ -11,7 +11,7 @@
     "@sendgrid/mail": "^8.1.4",
     "@stripe/react-stripe-js": "^3.5.1",
     "@stripe/stripe-js": "^6.1.0",
-    "@supabase/supabase-js": "^2.49.1",
+    "@supabase/supabase-js": "^2.49.4",
     "@tailwindcss/cli": "^4.0.6",
     "@vercel/analytics": "^1.5.0",
     "clsx": "^2.1.1",

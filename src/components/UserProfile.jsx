@@ -14,6 +14,9 @@ import {
   Settings
 } from 'lucide-react';
 
+// Import our fixed profile image component
+import FixedProfileImage from './FixedProfileImage';
+
 // Import Supabase client and helpers
 import {
   supabase,
@@ -490,15 +493,11 @@ const UserProfile = () => {
               <div className="space-y-6">
                 <div className="flex items-center space-x-6">
                   {profile.avatar_url ? (
-                    <img
-                      src={`${profile.avatar_url}${profile.avatar_url.includes('?') ? '&' : '?'}cb=${Date.now()}`}
-                      alt="Profile"
-                      className="w-24 h-24 rounded-full object-cover"
-                      onError={(e) => {
-                        console.log("Avatar image failed to load:", profile.avatar_url);
-                        e.target.onerror = null; // Prevent infinite loop
-                        e.target.src = getPlaceholderUrl(96, 96);
-                      }}
+                    <FixedProfileImage 
+                      url={profile.avatar_url} 
+                      size={24} 
+                      userId={profile.id}
+                      fallback={getPlaceholderUrl}
                     />
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-forest-100 flex items-center justify-center">
@@ -563,15 +562,11 @@ const UserProfile = () => {
               <div className="space-y-6">
                 <div className="flex items-center space-x-6">
                   {profile.avatar_url ? (
-                    <img
-                      src={`${profile.avatar_url}${profile.avatar_url.includes('?') ? '&' : '?'}cb=${Date.now()}`}
-                      alt="Profile"
-                      className="w-24 h-24 rounded-full object-cover"
-                      onError={(e) => {
-                        console.log("Other user avatar failed to load:", profile.avatar_url);
-                        e.target.onerror = null;
-                        e.target.src = getPlaceholderUrl(96, 96);
-                      }}
+                    <FixedProfileImage 
+                      url={profile.avatar_url} 
+                      size={24} 
+                      userId={profile.id}
+                      fallback={getPlaceholderUrl}
                     />
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-forest-100 flex items-center justify-center">

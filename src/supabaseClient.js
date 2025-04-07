@@ -1534,10 +1534,15 @@ export const uploadProfileImage = async (file, userId = null) => {
     const fileName = `user_${userId}_${timestamp}.${fileExt}`;
     
     // Define buckets to try in order of preference based on existing bucket structure
-    // Changing the order to try tool-images first which might have working CORS
+    // For user profile images, we should use:
+    // - user-images bucket: This is the primary bucket for user-related images
+    // - avatars folder: This is expected by your existing code
     const buckets = [
-      { name: 'tool-images', path: `avatars/${fileName}` },
-      { name: 'user-images', path: `avatars/${fileName}` }
+      // Most likely to work based on your existing setup 
+      { name: 'user-images', path: `avatars/${fileName}` },
+      
+      // Alternative buckets (less likely to work unless set up)
+      { name: 'tool-images', path: `avatars/${fileName}` }
     ];
     
     // Try each bucket in sequence until one works
@@ -1616,20 +1621,33 @@ export const uploadProfileImage = async (file, userId = null) => {
   }
 };
 
+/**
+ * Fix a URL to ensure it's properly formatted and has cache busting
+ * This is especially useful for storage URLs that might have CORS issues
+ * @param {string} url - The URL to fix
+ * @returns {string} The fixed URL
+ */
+function fixUrl(url) {
+  if (!url) return url;
+  
+  // Add cache busting parameter
+  const cacheBuster = Date.now();
+  const urlWithCacheBusting = url.includes('?') 
+    ? `${url}&t=${cacheBuster}` 
+    : `${url}?t=${cacheBuster}`;
+  
+  return urlWithCacheBusting;
+}
+
 // Helper function to update user profile with new avatar URL
 async function updateUserWithNewAvatar(userId, publicUrl) {
   try {
     console.log(`Updating user ${userId} with new avatar URL: ${publicUrl}`);
     
     // Ensure the URL has a cache-busting parameter
-    let urlWithCacheBusting = publicUrl;
-    if (publicUrl && publicUrl.includes('?')) {
-      urlWithCacheBusting = `${publicUrl}&t=${Date.now()}`;
-    } else if (publicUrl) {
-      urlWithCacheBusting = `${publicUrl}?t=${Date.now()}`;
-    }
+    const urlWithCacheBusting = fixUrl(publicUrl);
     
-    // Update the user profile
+    // Update the user profile with the fixed URL
     const { data, error: updateError } = await supabase
       .from('users')
       .update({ 
@@ -1644,6 +1662,18 @@ async function updateUserWithNewAvatar(userId, publicUrl) {
     }
     
     console.log('Profile image updated in database. Result:', data);
+    
+    // Check if image URL appears to be accessible
+    if (typeof window !== 'undefined' && urlWithCacheBusting) {
+      console.log('Testing image URL accessibility...');
+      
+      // Create a test image to check URL validity
+      const testImg = new Image();
+      testImg.onload = () => console.log('Image URL test: SUCCESS! URL is accessible');
+      testImg.onerror = () => console.warn('Image URL test: FAILED! URL might be inaccessible');
+      testImg.src = urlWithCacheBusting;
+    }
+    
     return data;
   } catch (error) {
     console.error('Error in updateUserWithNewAvatar:', error);
