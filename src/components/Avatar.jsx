@@ -8,7 +8,7 @@ import ImageService from '../services/imageService';
 const Avatar = ({ 
   url, 
   userId, 
-  name, 
+  name = '', 
   size = 'md',
   className = ''
 }) => {
@@ -47,6 +47,7 @@ const Avatar = ({
   // Handle image loading errors
   const handleError = () => {
     console.log('Avatar image failed to load:', imgSrc);
+    console.log('Avatar props:', { url, userId, name });
     setError(true);
   };
   

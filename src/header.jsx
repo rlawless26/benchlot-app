@@ -61,12 +61,18 @@ const Header = () => {
       const { data } = await getCurrentUser();
       
       // Debug user profile information
-      if (data && data.profile) {
-        console.log('User profile in header:', 
-          `is_seller: ${data.profile.is_seller}`, 
-          `stripe_account_id: ${data.profile.stripe_account_id}`,
-          `stripe_account_status: ${data.profile.stripe_account_status}`
-        );
+      if (data) {
+        console.log('User data in header:', data);
+        
+        if (data.profile) {
+          console.log('User profile in header:', 
+            `id: ${data.id}`,
+            `email: ${data.email}`,
+            `is_seller: ${data.profile.is_seller}`, 
+            `avatar_url: ${data.profile.avatar_url}`,
+            `username: ${data.profile.username}`
+          );
+        }
       }
       
       setUser(data);
@@ -247,7 +253,7 @@ const Header = () => {
                       <Avatar
                         url={user.profile?.avatar_url}
                         userId={user.id}
-                        name={user.profile?.username || user.email}
+                        name={user.profile?.username || user.email || ''}
                         size="sm"
                       />
                     </button>

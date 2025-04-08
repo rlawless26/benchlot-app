@@ -19,24 +19,36 @@ const ImageService = {
   },
 
   /**
-   * Returns the URL for a user's avatar image
+   * Returns the URL for a user's avatar image (only used for fallback)
    * @param {string} userId - The user's ID
    * @returns {string} URL to the user's avatar
    */
   getAvatarUrl(userId) {
     if (!userId) return null;
-    return this.getPublicUrl('user-images', `avatars/user_${userId}.jpg`);
+    
+    // We no longer use a fixed format since we use timestamps and preserve extensions
+    // This is only used as a fallback if no URL is provided directly
+    // In production, you should fetch the actual avatar URL from your database instead
+    
+    // Return a placeholder that shows we need to look up the actual URL
+    return null;
   },
 
   /**
-   * Returns the URL for a tool's image
+   * Returns the URL for a tool's image (only used for fallback)
    * @param {string} toolId - The tool's ID
    * @param {number} index - Image index (0 for primary image)
    * @returns {string} URL to the tool image
    */
   getToolImageUrl(toolId, index = 0) {
     if (!toolId) return null;
-    return this.getPublicUrl('tool-images', `${toolId}/image_${index}.jpg`);
+    
+    // We no longer use a fixed format since we use timestamps and preserve extensions
+    // This is only used as a fallback if no URL is provided directly
+    // In production, you should fetch the actual tool image URL from your database instead
+    
+    // Return a placeholder that shows we need to look up the actual URL
+    return null;
   },
 
   /**
