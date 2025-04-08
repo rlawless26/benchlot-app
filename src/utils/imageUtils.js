@@ -51,6 +51,12 @@ export function getToolImageUrl(toolId, position = 0, fileExtension = 'jpg') {
 export function fixStorageUrl(url, addCacheBuster = false) {
   if (!url) return url;
   
+  // CRITICAL: Special handling for blob URLs
+  if (url.startsWith('blob:')) {
+    console.log('Using blob URL directly without modification in imageUtils:', url);
+    return url; // Never modify blob URLs
+  }
+  
   try {
     // Special case for the problematic 'svg' URL
     if (url.includes('/avatars/svg')) {
@@ -90,6 +96,12 @@ export function fixStorageUrl(url, addCacheBuster = false) {
  */
 export function getReliableImageUrl(url, fallbackUrl = null) {
   if (!url) return fallbackUrl;
+  
+  // Never modify blob URLs - they must be used as-is
+  if (url.startsWith('blob:')) {
+    console.log('Using blob URL directly in getReliableImageUrl:', url);
+    return url;
+  }
   
   try {
     // Process Supabase URLs

@@ -1,92 +1,76 @@
-import React, { useState } from 'react';
-import { User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import ImageService from '../services/imageService';
 
 /**
- * Avatar - A completely revamped component for displaying user profile images
- * with robust fallback mechanisms
+ * A simplified Avatar component that displays user avatars with fallbacks
+ * Handles all types of image URLs automatically
  */
 const Avatar = ({ 
-  user, 
-  size = 40, 
-  className = "" 
+  url, 
+  userId, 
+  name, 
+  size = 'md',
+  className = ''
 }) => {
-  const [imageError, setImageError] = useState(false);
+  const [imgSrc, setImgSrc] = useState(null);
+  const [error, setError] = useState(false);
   
-  // Default avatar URL hosted on a reliable CDN with cache buster to prevent stale caches
-  const defaultAvatarUrl = 'https://uploads-ssl.webflow.com/65e6eb94f975cf76fcfb9fa3/default-avatar.svg';
-  
-  // Get user name for alternative display
-  const userName = user?.username || user?.full_name || 'User';
-  const initials = userName.charAt(0).toUpperCase();
-  
-  // If the avatar URL fails to load, generate a URL for a fallback avatar using ui-avatars.com
-  const generateAvatarUrl = () => {
-    const cacheBuster = Date.now();
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=${size * 2}&background=2563eb&color=ffffff&cachebuster=${cacheBuster}`;
+  // Size classes mapped to Tailwind classes
+  const sizeMap = {
+    xs: 'w-6 h-6 text-xs',
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-10 h-10 text-base',
+    lg: 'w-12 h-12 text-lg',
+    xl: 'w-16 h-16 text-xl',
+    '2xl': 'w-20 h-20 text-2xl'
   };
-
-  // Fix Supabase storage URLs - ensures we get a public URL without query parameters
-  const fixStorageUrl = (url) => {
-    if (!url) return null;
+  
+  const sizeClass = sizeMap[size] || sizeMap.md;
+  
+  // Determine the image source on mount and when props change
+  useEffect(() => {
+    // Reset error state when props change
+    setError(false);
     
-    try {
-      // Fix common Supabase URL issues
-      if (url.includes('supabase.co/storage/v1/object/sign/')) {
-        // Change signed URLs to public URLs
-        url = url.replace('/object/sign/', '/object/public/');
-        // Remove query parameters
-        url = url.split('?')[0];
-      } else if (url.includes('supabase.co/storage/v1/object/public/')) {
-        // Remove query parameters from public URLs
-        url = url.split('?')[0];
-      }
-      
-      // Add a cache buster to prevent stale caches
-      const cacheBuster = Date.now();
-      return `${url}?cb=${cacheBuster}`;
-    } catch (e) {
-      console.error('Error fixing avatar URL:', e);
-      return null;
+    if (url) {
+      // Use direct URL if provided
+      setImgSrc(ImageService.processImageUrl(url));
+    } else if (userId) {
+      // Otherwise generate from userId
+      setImgSrc(ImageService.getAvatarUrl(userId));
+    } else {
+      // No source available
+      setError(true);
     }
-  };
-
-  // Check if we should use the user's avatar or a fallback
-  let avatarUrl = null;
+  }, [url, userId]);
   
-  if (user?.avatar_url && !imageError) {
-    avatarUrl = fixStorageUrl(user.avatar_url);
-    console.log('Fixed avatar URL:', avatarUrl);
-  }
-
-  // If we can't use the avatar URL for any reason, show the initials avatar
-  if (!avatarUrl) {
+  // Handle image loading errors
+  const handleError = () => {
+    console.log('Avatar image failed to load:', imgSrc);
+    setError(true);
+  };
+  
+  // Render fallback if there's an error or no image
+  if (error || !imgSrc) {
+    const initials = ImageService.getInitials(name || 'User');
+    
     return (
       <div 
-        className={`bg-blue-600 flex items-center justify-center text-white font-medium rounded-full ${className}`}
-        style={{ width: size, height: size, fontSize: Math.max(size / 2.5, 12) }}
-        title={userName}
+        className={`${sizeClass} rounded-full bg-gray-300 flex items-center justify-center text-gray-700 ${className}`}
+        title={name || 'User'}
       >
         {initials}
       </div>
     );
   }
-
-  // Handle error on image load - This is simpler than the ReliableImage approach
-  const handleImageError = () => {
-    console.log(`Avatar image failed to load: ${avatarUrl}`);
-    setImageError(true);
-  };
-
-  // Otherwise, use the user's avatar with direct error handling
+  
+  // Render the actual image
   return (
-    <img 
-      src={avatarUrl}
-      alt={userName}
-      className={`rounded-full ${className}`}
-      width={size}
-      height={size}
-      onError={handleImageError}
-      style={{ width: size, height: size, objectFit: 'cover' }}
+    <img
+      src={imgSrc}
+      alt={name || 'User avatar'}
+      className={`${sizeClass} rounded-full object-cover ${className}`}
+      onError={handleError}
     />
   );
 };

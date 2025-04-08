@@ -26,12 +26,11 @@ const ToolListingCard = ({ tool, featured = false }) => {
       {/* Image */}
       <Link to={`/tool/${tool.id}`} className="block relative h-48">
         <ToolImage 
-          tool={tool}
+          url={tool.image_url}
+          toolId={tool.id}
           index={0}
           alt={tool.name}
           className="w-full h-full object-cover"
-          width={300}
-          height={200}
         />
         
         {/* Verification badge */}

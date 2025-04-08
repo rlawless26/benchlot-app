@@ -21,24 +21,36 @@ const ReliableImage = ({
   const processUrl = (url) => {
     if (!url) return null;
     
+    // IMPORTANT: Special handling for blob URLs - don't modify them at all
+    if (url.startsWith('blob:')) {
+      console.log('Using blob URL directly in ReliableImage:', url);
+      return url; // Return blob URLs as-is
+    }
+    
     try {
+      let fixedUrl = url;
+      
       // Fix common Supabase URL issues
       if (url.includes('supabase.co/storage/v1/object/sign/')) {
         // Change signed URLs to public URLs
-        url = url.replace('/object/sign/', '/object/public/');
+        fixedUrl = url.replace('/object/sign/', '/object/public/');
         // Remove query parameters
-        url = url.split('?')[0];
+        fixedUrl = fixedUrl.split('?')[0];
       } else if (url.includes('supabase.co/storage/v1/object/public/')) {
         // Remove query parameters from public URLs
-        url = url.split('?')[0];
+        fixedUrl = fixedUrl.split('?')[0];
       }
       
-      // Add a cache buster to prevent stale caches
-      const cacheBuster = Date.now();
-      return `${url}?cb=${cacheBuster}`;
+      // Only add cache buster for Supabase storage URLs
+      if (fixedUrl.includes('supabase.co/storage/')) {
+        const cacheBuster = Date.now();
+        return `${fixedUrl}?cb=${cacheBuster}`;
+      }
+      
+      return fixedUrl;
     } catch (e) {
       console.error('Error processing image URL:', e);
-      return null;
+      return url; // Return original URL on error
     }
   };
 

@@ -24,12 +24,12 @@ import {
   fetchUserListings,
   fetchUserReviews,
   updateUserProfile,
-  uploadProfileImage,
   sendMessage,
   isUrlAccessible,
   checkEnvironment,
   checkSupabaseConnection
 } from '../supabaseClient';
+import { uploadAvatar } from '../utils/uploadHelpers';
 
 // Import application config
 import config from '../config';
@@ -269,19 +269,21 @@ const UserProfile = () => {
       // Upload new profile image if selected
       if (selectedFile) {
         setUploadingImage(true);
-        const { error: uploadError } = await uploadProfileImage(selectedFile);
+        const { error: uploadError } = await uploadAvatar(authData.user.id, selectedFile);
         if (uploadError) throw uploadError;
         setUploadingImage(false);
       }
 
-      // Update local state
+      // Update local state - IMPORTANT: Use a blob URL for immediate preview but mark it specially
+      const blobUrl = selectedFile ? URL.createObjectURL(selectedFile) : null;
+      
       setProfile(prev => ({
         ...prev,
         username: editFormData.username,
         full_name: editFormData.full_name,
         location: editFormData.location,
         bio: editFormData.bio,
-        avatar_url: selectedFile ? URL.createObjectURL(selectedFile) : prev.avatar_url
+        avatar_url: blobUrl || prev.avatar_url
       }));
 
       setEditSuccess(true);
@@ -505,8 +507,10 @@ const UserProfile = () => {
               <div className="space-y-6">
                 <div className="flex items-center space-x-6">
                   <Avatar
-                    user={profile}
-                    size={96}
+                    url={profile.avatar_url}
+                    userId={profile.id}
+                    name={profile.username || profile.full_name || 'User'}
+                    size="xl"
                     className="border-2 border-stone-100"
                   />
 
@@ -567,8 +571,10 @@ const UserProfile = () => {
               <div className="space-y-6">
                 <div className="flex items-center space-x-6">
                   <Avatar
-                    user={profile}
-                    size={96}
+                    url={profile.avatar_url}
+                    userId={profile.id}
+                    name={profile.username || profile.full_name || 'User'}
+                    size="xl"
                     className="border-2 border-stone-100"
                   />
 

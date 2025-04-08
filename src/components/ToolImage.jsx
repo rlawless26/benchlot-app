@@ -1,56 +1,63 @@
-import React from 'react';
-import ReliableImage from './ReliableImage';
+import React, { useState, useEffect } from 'react';
+import ImageService from '../services/imageService';
 
 /**
- * ToolImage - A simplified component for displaying tool listing images
- * with built-in error handling and fallbacks
+ * Simplified component for displaying tool images with fallbacks
  */
 const ToolImage = ({ 
-  tool, 
-  index = 0, 
-  className = "",
-  width,
-  height,
-  style,
-  alt
+  url, 
+  toolId,
+  index = 0,
+  alt = 'Tool image',
+  className = '',
+  placeholderClassName = ''
 }) => {
-  // Get the image URL at the specified index
-  const getImageUrl = () => {
-    if (!tool) return null;
+  const [imgSrc, setImgSrc] = useState(null);
+  const [error, setError] = useState(false);
+  
+  // Determine the image source on mount and when props change
+  useEffect(() => {
+    // Reset error state when props change
+    setError(false);
     
-    // If the tool has a direct images array, use that
-    if (tool.images && Array.isArray(tool.images) && tool.images[index]) {
-      return tool.images[index];
+    if (url) {
+      // Use direct URL if provided
+      setImgSrc(ImageService.processImageUrl(url));
+    } else if (toolId) {
+      // Otherwise generate from toolId and index
+      setImgSrc(ImageService.getToolImageUrl(toolId, index));
+    } else {
+      // No source available
+      setError(true);
     }
-    
-    // If we have a toolImageUrl specifically for this tool
-    if (tool.toolImageUrl) {
-      return tool.toolImageUrl;
-    }
-    
-    // Return null to trigger the fallback
-    return null;
+  }, [url, toolId, index]);
+  
+  // Handle image loading errors
+  const handleError = () => {
+    console.log('Tool image failed to load:', imgSrc);
+    setError(true);
   };
-
-  // Create a default placeholder based on tool name if available
-  const getPlaceholder = () => {
-    const toolName = tool?.name || tool?.title || 'Tool';
-    const cacheBuster = Date.now();
-    return `https://via.placeholder.com/${width || 300}x${height || 200}/CCCCCC/333333?text=${encodeURIComponent(toolName)}&cb=${cacheBuster}`;
-  };
-
-  // Get a description for the alt text
-  const altText = alt || tool?.name || tool?.title || "Tool image";
-
+  
+  // Render fallback if there's an error or no image
+  if (error || !imgSrc) {
+    return (
+      <div 
+        className={`bg-gray-200 flex items-center justify-center text-gray-400 ${className || 'w-full h-full aspect-square'} ${placeholderClassName}`}
+      >
+        <svg className="w-1/3 h-1/3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+        </svg>
+      </div>
+    );
+  }
+  
+  // Render the actual image
   return (
-    <ReliableImage 
-      src={getImageUrl()}
-      alt={altText}
-      className={className || "object-cover"}
-      width={width || 300}
-      height={height || 200}
-      style={style || {}}
-      fallbackSrc={getPlaceholder()}
+    <img
+      src={imgSrc}
+      alt={alt}
+      className={`object-cover ${className || 'w-full h-full aspect-square'}`}
+      onError={handleError}
     />
   );
 };

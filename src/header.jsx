@@ -245,8 +245,10 @@ const Header = () => {
                       aria-haspopup="true"
                     >
                       <Avatar
-                        user={user.profile || { username: user.email }}
-                        size={32}
+                        url={user.profile?.avatar_url}
+                        userId={user.id}
+                        name={user.profile?.username || user.email}
+                        size="sm"
                       />
                     </button>
 
