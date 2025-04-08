@@ -261,13 +261,18 @@ const Header = () => {
                       aria-expanded={profileMenuOpen}
                       aria-haspopup="true"
                     >
-                      {user && (
+                      {user ? (
                         <Avatar
                           url={user.profile?.avatar_url}
                           userId={user.id}
                           name={(user.profile?.username || user.email || '')}
                           size="sm"
                         />
+                      ) : (
+                        // Fallback when user object is not available
+                        <div className="w-8 h-8 rounded-full bg-forest-100 flex items-center justify-center">
+                          <User className="h-4 w-4 text-forest-600" />
+                        </div>
                       )}
                     </button>
 

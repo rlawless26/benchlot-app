@@ -27,14 +27,12 @@ const ImageService = {
   getAvatarUrl(userId) {
     if (!userId) return null;
     
-    // Provide a default avatar path - we're no longer generating specific paths dynamically
-    // since that would require database access to get the actual file path
-    const defaultAvatarPath = 'https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/user-images/default-avatar.png';
+    // Instead of using a path that might not exist, we'll return null
+    // and let the Avatar component handle the fallback display
+    console.log('No direct avatar URL provided for user:', userId);
     
-    // Log that we're using the default avatar
-    console.log('No direct avatar URL provided. Using default avatar for user:', userId);
-    
-    return defaultAvatarPath;
+    // Return null to trigger the UI fallback
+    return null;
   },
 
   /**
@@ -46,13 +44,11 @@ const ImageService = {
   getToolImageUrl(toolId, index = 0) {
     if (!toolId) return null;
     
-    // Provide a default tool image placeholder
-    const defaultToolImagePath = 'https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/tool-images/default-tool.png';
+    // Return null to trigger the UI fallback in the ToolImage component
+    console.log('No direct tool image URL provided for tool:', toolId, 'index:', index);
     
-    // Log that we're using the default image
-    console.log('No direct tool image URL provided. Using default image for tool:', toolId, 'index:', index);
-    
-    return defaultToolImagePath;
+    // Return null to trigger the UI fallback
+    return null;
   },
 
   /**

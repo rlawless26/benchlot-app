@@ -62,9 +62,10 @@ const Avatar = ({
   if (error || !imgSrc) {
     const initials = ImageService.getInitials(name || 'User');
     
+    // Enhanced fallback with a gradient background for better visibility
     return (
       <div 
-        className={`${sizeClass} rounded-full bg-gray-300 flex items-center justify-center text-gray-700 ${className}`}
+        className={`${sizeClass} rounded-full bg-gradient-to-br from-forest-500 to-forest-700 flex items-center justify-center text-white font-medium ${className}`}
         title={name || 'User'}
       >
         {initials}
