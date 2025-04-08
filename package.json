@@ -64,7 +64,7 @@
     "concurrently": "^9.1.2",
     "lucide-react": "^0.474.0",
     "postcss": "^8.4.31",
-    "supabase": "^2.20.5",
+    "supabase": "^2.20.12",
     "tailwindcss": "^3.3.0",
     "web-vitals": "^4.2.4"
   }

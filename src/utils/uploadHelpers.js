@@ -34,13 +34,18 @@ export const uploadAvatar = async (userId, file) => {
     const url = ImageService.getPublicUrl(bucket, filePath);
     
     // Update user profile with standardized URL
-    const { error: profileError } = await supabase
-      .from('users')  // Changed from 'profiles' to 'users'
+    console.log('Updating user avatar in database:', { userId, url });
+    
+    const { data: updateData, error: profileError } = await supabase
+      .from('users')
       .update({ avatar_url: url })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select();
 
     if (profileError) {
       console.error('Error updating profile with new avatar URL:', profileError);
+    } else {
+      console.log('Successfully updated avatar URL in database:', updateData);
     }
 
     return { success: true, url, error: null };

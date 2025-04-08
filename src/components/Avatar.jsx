@@ -32,14 +32,21 @@ const Avatar = ({
     // Reset error state when props change
     setError(false);
     
+    console.log('Avatar component props:', { url, userId, name });
+    
     if (url) {
       // Use direct URL if provided
-      setImgSrc(ImageService.processImageUrl(url));
+      const processedUrl = ImageService.processImageUrl(url);
+      console.log('Using processed URL in Avatar:', processedUrl);
+      setImgSrc(processedUrl);
     } else if (userId) {
       // Otherwise generate from userId
-      setImgSrc(ImageService.getAvatarUrl(userId));
+      const fallbackUrl = ImageService.getAvatarUrl(userId);
+      console.log('Using fallback avatar URL:', fallbackUrl);
+      setImgSrc(fallbackUrl);
     } else {
       // No source available
+      console.log('No URL or userId provided to Avatar component');
       setError(true);
     }
   }, [url, userId]);

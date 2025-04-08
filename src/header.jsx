@@ -62,7 +62,7 @@ const Header = () => {
       
       // Debug user profile information
       if (data) {
-        console.log('User data in header:', data);
+        console.log('User data in header:', JSON.stringify(data, null, 2));
         
         if (data.profile) {
           console.log('User profile in header:', 
@@ -72,7 +72,18 @@ const Header = () => {
             `avatar_url: ${data.profile.avatar_url}`,
             `username: ${data.profile.username}`
           );
+          
+          // Check if avatar_url exists
+          if (data.profile.avatar_url) {
+            console.log('Avatar URL exists:', data.profile.avatar_url);
+          } else {
+            console.log('Avatar URL is missing for user:', data.id);
+          }
+        } else {
+          console.log('No profile data found for user:', data.id);
         }
+      } else {
+        console.log('No user data returned from getCurrentUser()');
       }
       
       setUser(data);
@@ -250,12 +261,14 @@ const Header = () => {
                       aria-expanded={profileMenuOpen}
                       aria-haspopup="true"
                     >
-                      <Avatar
-                        url={user.profile?.avatar_url}
-                        userId={user.id}
-                        name={user.profile?.username || user.email || ''}
-                        size="sm"
-                      />
+                      {user && (
+                        <Avatar
+                          url={user.profile?.avatar_url}
+                          userId={user.id}
+                          name={(user.profile?.username || user.email || '')}
+                          size="sm"
+                        />
+                      )}
                     </button>
 
                     {profileMenuOpen && (

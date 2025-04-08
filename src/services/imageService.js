@@ -3,7 +3,8 @@
  * Provides consistent URL generation, error handling, and fallbacks
  */
 
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || '';
+// Get the Supabase URL from environment variables
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://tavhowcenicgowmdmbcz.supabase.co';
 const STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public`;
 
 const ImageService = {
@@ -19,36 +20,39 @@ const ImageService = {
   },
 
   /**
-   * Returns the URL for a user's avatar image (only used for fallback)
+   * Returns the URL for a user's avatar image
    * @param {string} userId - The user's ID
-   * @returns {string} URL to the user's avatar
+   * @returns {string} URL to the user's avatar or default placeholder
    */
   getAvatarUrl(userId) {
     if (!userId) return null;
     
-    // We no longer use a fixed format since we use timestamps and preserve extensions
-    // This is only used as a fallback if no URL is provided directly
-    // In production, you should fetch the actual avatar URL from your database instead
+    // Provide a default avatar path - we're no longer generating specific paths dynamically
+    // since that would require database access to get the actual file path
+    const defaultAvatarPath = 'https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/user-images/default-avatar.png';
     
-    // Return a placeholder that shows we need to look up the actual URL
-    return null;
+    // Log that we're using the default avatar
+    console.log('No direct avatar URL provided. Using default avatar for user:', userId);
+    
+    return defaultAvatarPath;
   },
 
   /**
-   * Returns the URL for a tool's image (only used for fallback)
+   * Returns the URL for a tool's image
    * @param {string} toolId - The tool's ID
    * @param {number} index - Image index (0 for primary image)
-   * @returns {string} URL to the tool image
+   * @returns {string} URL to the tool image or default placeholder
    */
   getToolImageUrl(toolId, index = 0) {
     if (!toolId) return null;
     
-    // We no longer use a fixed format since we use timestamps and preserve extensions
-    // This is only used as a fallback if no URL is provided directly
-    // In production, you should fetch the actual tool image URL from your database instead
+    // Provide a default tool image placeholder
+    const defaultToolImagePath = 'https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/tool-images/default-tool.png';
     
-    // Return a placeholder that shows we need to look up the actual URL
-    return null;
+    // Log that we're using the default image
+    console.log('No direct tool image URL provided. Using default image for tool:', toolId, 'index:', index);
+    
+    return defaultToolImagePath;
   },
 
   /**
@@ -66,17 +70,31 @@ const ImageService = {
       return url;
     }
     
-    // Handle storage URLs to ensure they're public and clean
+    // Handle storage URLs
     if (url.includes('/storage/v1/')) {
-      // Remove any existing query parameters
-      const baseUrl = url.split('?')[0];
-      
-      // Ensure it's using the public endpoint
-      return baseUrl.replace('/storage/v1/object/authenticated', '/storage/v1/object/public');
+      try {
+        // Parse the URL to handle it properly
+        const urlObj = new URL(url);
+        
+        // Remove any existing query parameters
+        const baseUrl = url.split('?')[0];
+        
+        // Ensure it's using the public endpoint
+        let processedUrl = baseUrl.replace('/storage/v1/object/authenticated', '/storage/v1/object/public');
+        
+        // Add cache busting for Supabase Storage URLs
+        processedUrl = `${processedUrl}?t=${Date.now()}`;
+        
+        console.log('Processed storage URL:', url, '->', processedUrl);
+        return processedUrl;
+      } catch (e) {
+        console.error('Error processing URL:', e);
+        return url;
+      }
     }
     
-    // Add cache busting for non-blob URLs
-    if (!url.startsWith('blob:') && !url.includes('?')) {
+    // Add cache busting for all other URLs that don't have query parameters
+    if (!url.includes('?')) {
       return `${url}?t=${Date.now()}`;
     }
     
