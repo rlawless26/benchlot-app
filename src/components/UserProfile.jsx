@@ -269,7 +269,7 @@ const UserProfile = () => {
       // Upload new profile image if selected
       if (selectedFile) {
         setUploadingImage(true);
-        const { error: uploadError } = await uploadAvatar(authData.user.id, selectedFile);
+        const { error: uploadError } = await uploadAvatar(userId, selectedFile);
         if (uploadError) throw uploadError;
         setUploadingImage(false);
       }

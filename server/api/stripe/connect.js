@@ -538,13 +538,6 @@ async function createConnectAccount(userId, email, res) {
       code: error.code || 'unknown'
     });
   }
-  } catch (error) {
-    console.error('Error in createConnectAccount function:', error);
-    res.status(500).json({
-      error: 'Unexpected error creating Connect account',
-      details: error.message
-    });
-  }
 }
 
 // Add a simple test endpoint to verify API connectivity without Stripe
