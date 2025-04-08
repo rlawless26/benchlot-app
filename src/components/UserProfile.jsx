@@ -14,8 +14,8 @@ import {
   Settings
 } from 'lucide-react';
 
-// Import our fixed profile image component
-import FixedProfileImage from './FixedProfileImage';
+// Import our Avatar component
+import Avatar from './Avatar';
 
 // Import Supabase client and helpers
 import {
@@ -504,18 +504,11 @@ const UserProfile = () => {
               ) : (
               <div className="space-y-6">
                 <div className="flex items-center space-x-6">
-                  {profile.avatar_url ? (
-                    <FixedProfileImage 
-                      url={profile.avatar_url} 
-                      size={24} 
-                      userId={profile.id}
-                      fallback={getPlaceholderUrl}
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-forest-100 flex items-center justify-center">
-                      <User className="h-12 w-12 text-forest-700" />
-                    </div>
-                  )}
+                  <Avatar
+                    user={profile}
+                    size={96}
+                    className="border-2 border-stone-100"
+                  />
 
                   <div>
                     <h2 className="text-2xl font-medium">{profile.username || 'No Username'}</h2>
@@ -573,18 +566,11 @@ const UserProfile = () => {
             {profile ? (
               <div className="space-y-6">
                 <div className="flex items-center space-x-6">
-                  {profile.avatar_url ? (
-                    <FixedProfileImage 
-                      url={profile.avatar_url} 
-                      size={24} 
-                      userId={profile.id}
-                      fallback={getPlaceholderUrl}
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full bg-forest-100 flex items-center justify-center">
-                      <User className="h-12 w-12 text-forest-700" />
-                    </div>
-                  )}
+                  <Avatar
+                    user={profile}
+                    size={96}
+                    className="border-2 border-stone-100"
+                  />
 
                   <div>
                     <h2 className="text-2xl font-medium">{profile.username || 'User'}</h2>

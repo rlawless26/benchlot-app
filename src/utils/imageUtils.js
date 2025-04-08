@@ -45,9 +45,10 @@ export function getToolImageUrl(toolId, position = 0, fileExtension = 'jpg') {
 /**
  * Fix any Supabase URL to ensure it uses the public endpoint
  * @param {string} url - The URL to fix
+ * @param {boolean} addCacheBuster - Whether to add a cache buster parameter
  * @returns {string} - The fixed URL
  */
-export function fixStorageUrl(url) {
+export function fixStorageUrl(url, addCacheBuster = false) {
   if (!url) return url;
   
   try {
@@ -56,20 +57,51 @@ export function fixStorageUrl(url) {
       return getStorageUrl('user-images', 'avatars/default-avatar.svg');
     }
     
+    let fixedUrl = url;
+    
     // Convert signed URLs to public URLs
     if (url.includes('/object/sign/')) {
-      return url.replace('/object/sign/', '/object/public/').split('?')[0];
+      fixedUrl = url.replace('/object/sign/', '/object/public/').split('?')[0];
     }
     
     // For URLs that already have the correct format, just ensure no query parameters
-    if (url.includes('supabase') && url.includes('?')) {
-      return url.split('?')[0];
+    else if (url.includes('supabase') && url.includes('?')) {
+      fixedUrl = url.split('?')[0];
     }
     
-    return url;
+    // Add a cache buster if requested - helps with browsers caching stale images
+    if (addCacheBuster && fixedUrl.includes('supabase')) {
+      const cacheBuster = Date.now();
+      return `${fixedUrl}?cb=${cacheBuster}`;
+    }
+    
+    return fixedUrl;
   } catch (error) {
     console.warn('Error fixing storage URL:', error);
     return url;
+  }
+}
+
+/**
+ * A global utility to reliably get an image from any path
+ * @param {string} url - The image URL to process
+ * @param {string} fallbackUrl - Optional fallback URL
+ * @returns {string} - A reliable image URL
+ */
+export function getReliableImageUrl(url, fallbackUrl = null) {
+  if (!url) return fallbackUrl;
+  
+  try {
+    // Process Supabase URLs
+    if (url.includes('supabase.co/storage')) {
+      return fixStorageUrl(url, true);  // Add cache buster by default
+    }
+    
+    // For other URLs, just pass through
+    return url;
+  } catch (error) {
+    console.warn('Error processing image URL:', error);
+    return fallbackUrl || url;
   }
 }
 
@@ -117,5 +149,6 @@ export default {
   getToolImageUrl,
   fixStorageUrl,
   getPlaceholderUrl,
-  getToolImage
+  getToolImage,
+  getReliableImageUrl
 };

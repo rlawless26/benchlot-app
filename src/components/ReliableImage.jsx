@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 /**
- * ReliableImage - A robust image component that handles various URL formats
- * and provides fallback mechanisms for Supabase storage URLs.
+ * ReliableImage - A completely revamped robust image component with simplified approach
+ * More direct and effective for consistent cross-browser functionality
  */
 const ReliableImage = ({ 
   src, 
@@ -13,86 +13,67 @@ const ReliableImage = ({
   height,
   style = {}
 }) => {
-  const [currentSrc, setCurrentSrc] = useState("");
-  const [hasError, setHasError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 1;
+  const [imageError, setImageError] = useState(false);
+  const [finalSrc, setFinalSrc] = useState('');
   
-  // Initialize the image source on mount or when src changes
-  useEffect(() => {
-    if (src) {
-      setCurrentSrc(convertToPublicUrl(src));
-      setHasError(false);
-      setRetryCount(0);
-    } else {
-      setCurrentSrc(fallbackSrc);
-    }
-  }, [src, fallbackSrc]);
-  
-  /**
-   * Converts any Supabase URL to a public URL without tokens
-   */
-  function convertToPublicUrl(url) {
-    if (!url) return fallbackSrc;
+  // Fix Supabase storage URLs - ensures we get a public URL without query parameters
+  // and adds a cache buster to prevent caching issues
+  const processUrl = (url) => {
+    if (!url) return null;
     
     try {
-      // Special case for the broken 'svg' path
-      if (url.includes('/avatars/svg')) {
-        return fallbackSrc;
+      // Fix common Supabase URL issues
+      if (url.includes('supabase.co/storage/v1/object/sign/')) {
+        // Change signed URLs to public URLs
+        url = url.replace('/object/sign/', '/object/public/');
+        // Remove query parameters
+        url = url.split('?')[0];
+      } else if (url.includes('supabase.co/storage/v1/object/public/')) {
+        // Remove query parameters from public URLs
+        url = url.split('?')[0];
       }
       
-      // Handle signed URLs by converting to public URLs
-      if (url.includes('/object/sign/')) {
-        // Remove token parameter and convert to public URL
-        return url.replace('/object/sign/', '/object/public/').split('?')[0];
-      }
-      
-      // If it has query parameters, strip them (common source of issues)
-      if (url.includes('?') && url.includes('supabase')) {
-        return url.split('?')[0];
-      }
-      
-      // Return the original URL if no special handling needed
-      return url;
-    } catch (error) {
-      console.warn('Error converting image URL:', error);
-      return fallbackSrc;
+      // Add a cache buster to prevent stale caches
+      const cacheBuster = Date.now();
+      return `${url}?cb=${cacheBuster}`;
+    } catch (e) {
+      console.error('Error processing image URL:', e);
+      return null;
+    }
+  };
+
+  // Use the processed URL or fallback
+  const imageSrc = !imageError && src ? (finalSrc || processUrl(src)) : fallbackSrc;
+  
+  // Handle error on image load
+  const handleImageError = () => {
+    console.log(`Image failed to load: ${imageSrc}`);
+    if (!imageError) {
+      setImageError(true);
+    }
+  };
+
+  // Set the final source if not already set
+  if (!finalSrc && src) {
+    const processed = processUrl(src);
+    if (processed) {
+      setFinalSrc(processed);
     }
   }
-  
-  /**
-   * Handles image loading errors with retry logic
-   */
-  function handleError() {
-    console.log(`Image error (${retryCount}/${MAX_RETRIES}):`, src);
-    
-    if (retryCount < MAX_RETRIES) {
-      // Increment retry count
-      setRetryCount(retryCount + 1);
-      
-      // Try different fallback strategies
-      if (retryCount === 0) {
-        // First retry: strip all query parameters
-        const strippedUrl = currentSrc.split('?')[0];
-        console.log('Retrying with stripped URL:', strippedUrl);
-        setCurrentSrc(strippedUrl);
-      }
-    } else {
-      // Max retries reached, show fallback
-      setHasError(true);
-      setCurrentSrc(fallbackSrc);
-    }
-  }
-  
+
   return (
     <img 
-      src={currentSrc}
+      src={imageError ? fallbackSrc : imageSrc}
       alt={alt}
       className={className}
-      style={style}
+      style={{
+        ...style,
+        width: width ? `${width}px` : style.width || 'auto',
+        height: height ? `${height}px` : style.height || 'auto',
+      }}
       width={width}
       height={height}
-      onError={handleError}
+      onError={handleImageError}
     />
   );
 };

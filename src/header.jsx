@@ -17,6 +17,9 @@ import {
   X
 } from 'lucide-react';
 
+// Import the Avatar component for improved image handling
+import Avatar from './components/Avatar';
+
 // Import Supabase client and helpers
 import { supabase, getCurrentUser, signOut } from './supabaseClient';
 
@@ -241,22 +244,10 @@ const Header = () => {
                       aria-expanded={profileMenuOpen}
                       aria-haspopup="true"
                     >
-                      {user.profile?.avatar_url ? (
-                        <img
-                          src={user.profile.avatar_url}
-                          alt={user.profile?.username || 'User avatar'}
-                          className="w-8 h-8 rounded-full object-cover"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.style.display = 'none';
-                            e.target.parentNode.innerHTML = `<div class="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center">${(user.profile?.username || user.email || 'U').charAt(0).toUpperCase()}</div>`;
-                          }}
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center">
-                          {(user.profile?.username || user.email || 'U').charAt(0).toUpperCase()}
-                        </div>
-                      )}
+                      <Avatar
+                        user={user.profile || { username: user.email }}
+                        size={32}
+                      />
                     </button>
 
                     {profileMenuOpen && (

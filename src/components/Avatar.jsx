@@ -1,50 +1,92 @@
-import React from 'react';
-import ReliableImage from './ReliableImage';
+import React, { useState } from 'react';
 import { User } from 'lucide-react';
 
 /**
- * Avatar - A component for displaying user profile images with proper fallbacks
+ * Avatar - A completely revamped component for displaying user profile images
+ * with robust fallback mechanisms
  */
 const Avatar = ({ 
   user, 
   size = 40, 
   className = "" 
 }) => {
-  // Default avatar URL
-  const defaultAvatarUrl = 'https://tavhowcenicgowmdmbcz.supabase.co/storage/v1/object/public/user-images/avatars/default-avatar.svg';
+  const [imageError, setImageError] = useState(false);
   
-  // Get user's avatar URL or name for generated avatar
-  const avatarUrl = user?.avatar_url;
+  // Default avatar URL hosted on a reliable CDN with cache buster to prevent stale caches
+  const defaultAvatarUrl = 'https://uploads-ssl.webflow.com/65e6eb94f975cf76fcfb9fa3/default-avatar.svg';
+  
+  // Get user name for alternative display
   const userName = user?.username || user?.full_name || 'User';
+  const initials = userName.charAt(0).toUpperCase();
   
-  // Generate a URL for a fallback avatar using ui-avatars.com
+  // If the avatar URL fails to load, generate a URL for a fallback avatar using ui-avatars.com
   const generateAvatarUrl = () => {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=${size * 2}&background=random&color=ffffff`;
+    const cacheBuster = Date.now();
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=${size * 2}&background=2563eb&color=ffffff&cachebuster=${cacheBuster}`;
   };
 
-  // If no avatar URL, show a generated avatar
+  // Fix Supabase storage URLs - ensures we get a public URL without query parameters
+  const fixStorageUrl = (url) => {
+    if (!url) return null;
+    
+    try {
+      // Fix common Supabase URL issues
+      if (url.includes('supabase.co/storage/v1/object/sign/')) {
+        // Change signed URLs to public URLs
+        url = url.replace('/object/sign/', '/object/public/');
+        // Remove query parameters
+        url = url.split('?')[0];
+      } else if (url.includes('supabase.co/storage/v1/object/public/')) {
+        // Remove query parameters from public URLs
+        url = url.split('?')[0];
+      }
+      
+      // Add a cache buster to prevent stale caches
+      const cacheBuster = Date.now();
+      return `${url}?cb=${cacheBuster}`;
+    } catch (e) {
+      console.error('Error fixing avatar URL:', e);
+      return null;
+    }
+  };
+
+  // Check if we should use the user's avatar or a fallback
+  let avatarUrl = null;
+  
+  if (user?.avatar_url && !imageError) {
+    avatarUrl = fixStorageUrl(user.avatar_url);
+    console.log('Fixed avatar URL:', avatarUrl);
+  }
+
+  // If we can't use the avatar URL for any reason, show the initials avatar
   if (!avatarUrl) {
     return (
-      <ReliableImage 
-        src={generateAvatarUrl()}
-        alt={userName}
-        className={`rounded-full ${className}`}
-        width={size}
-        height={size}
-        fallbackSrc={defaultAvatarUrl}
-      />
+      <div 
+        className={`bg-blue-600 flex items-center justify-center text-white font-medium rounded-full ${className}`}
+        style={{ width: size, height: size, fontSize: Math.max(size / 2.5, 12) }}
+        title={userName}
+      >
+        {initials}
+      </div>
     );
   }
 
-  // Otherwise, use the user's avatar with fallbacks
+  // Handle error on image load - This is simpler than the ReliableImage approach
+  const handleImageError = () => {
+    console.log(`Avatar image failed to load: ${avatarUrl}`);
+    setImageError(true);
+  };
+
+  // Otherwise, use the user's avatar with direct error handling
   return (
-    <ReliableImage 
+    <img 
       src={avatarUrl}
       alt={userName}
       className={`rounded-full ${className}`}
       width={size}
       height={size}
-      fallbackSrc={generateAvatarUrl()}
+      onError={handleImageError}
+      style={{ width: size, height: size, objectFit: 'cover' }}
     />
   );
 };
