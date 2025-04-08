@@ -18,8 +18,10 @@ export const uploadAvatar = async (userId, file) => {
   }
 
   try {
-    // Upload with standardized path
-    const filePath = `avatars/user_${userId}.jpg`;
+    // Generate path with timestamp and preserve file extension
+    const timestamp = Date.now();
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const filePath = `avatars/user_${userId}_${timestamp}.${fileExt}`;
     const bucket = 'user-images';
     
     const { error } = await supabase.storage
@@ -33,7 +35,7 @@ export const uploadAvatar = async (userId, file) => {
     
     // Update user profile with standardized URL
     const { error: profileError } = await supabase
-      .from('profiles')
+      .from('users')  // Changed from 'profiles' to 'users'
       .update({ avatar_url: url })
       .eq('id', userId);
 
@@ -61,8 +63,10 @@ export const uploadToolImage = async (toolId, file, index = 0) => {
   }
 
   try {
-    // Upload with standardized path
-    const filePath = `${toolId}/image_${index}.jpg`;
+    // Generate path with timestamp and preserve file extension
+    const timestamp = Date.now();
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const filePath = `${toolId}/image_${index}_${timestamp}.${fileExt}`;
     const bucket = 'tool-images';
     
     const { error } = await supabase.storage
@@ -78,13 +82,45 @@ export const uploadToolImage = async (toolId, file, index = 0) => {
     // The column name depends on the index
     const columnName = index === 0 ? 'image_url' : `image_url_${index}`;
     
-    const { error: updateError } = await supabase
+    // Also add the URL to the images array if it exists
+    const { data: toolData, error: getError } = await supabase
       .from('tools')
-      .update({ [columnName]: url })
-      .eq('id', toolId);
-
-    if (updateError) {
-      console.error(`Error updating tool with new image URL at index ${index}:`, updateError);
+      .select('images')
+      .eq('id', toolId)
+      .single();
+      
+    if (!getError && toolData) {
+      let images = Array.isArray(toolData.images) ? [...toolData.images] : [];
+      
+      // Add or update the image at the specified index
+      if (index >= images.length) {
+        images.push(url);
+      } else {
+        images[index] = url;
+      }
+      
+      // Update the tool with both the specific URL field and the images array
+      const { error: updateError } = await supabase
+        .from('tools')
+        .update({ 
+          [columnName]: url,
+          images: images
+        })
+        .eq('id', toolId);
+        
+      if (updateError) {
+        console.error(`Error updating tool with new image URL at index ${index}:`, updateError);
+      }
+    } else {
+      // Fallback to just updating the specific column if we couldn't get the current images
+      const { error: updateError } = await supabase
+        .from('tools')
+        .update({ [columnName]: url })
+        .eq('id', toolId);
+        
+      if (updateError) {
+        console.error(`Error updating tool with new image URL at index ${index}:`, updateError);
+      }
     }
 
     return { success: true, url, error: null };
